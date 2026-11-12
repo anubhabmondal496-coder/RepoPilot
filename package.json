@@ -19,11 +19,24 @@
     "onStartupFinished"
   ],
   "main": "./dist/extension.js",
+  "bin": {
+    "repopilot": "./bin/repopilot.js"
+  },
   "contributes": {
     "commands": [
       {
         "command": "repopilot.draftCommit",
         "title": "Draft Semantic Commit",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.enableTurboMode",
+        "title": "Enable Turbo Mode",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.enablePreviewMode",
+        "title": "Enable Preview Mode",
         "category": "RepoPilot"
       },
       {
