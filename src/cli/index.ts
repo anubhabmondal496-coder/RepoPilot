@@ -1,31 +1,26 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
+import { GitService } from '../services/gitService';
+import { SecurityScanner } from '../services/securityScanner';
+import { ContractChecker } from '../services/contractChecker';
+import { GeneratorService } from '../services/generatorService';
+import { InteractiveJudge } from '../services/interactiveJudge';
+import { DepFixer } from '../services/depFixer';
 
 export interface RepoPilotConfig {
   mode: 'turbo' | 'preview';
   customCommands?: Record<string, string>;
 }
 
-export type CommandAction = (args: string[]) => void | Promise<void>;
-
-export interface CommandDefinition {
-  name: string;
-  description: string;
-  action: CommandAction;
-}
-
 const CONFIG_FILE = path.join(process.cwd(), '.repopilot.json');
 
-/**
- * Loads configuration from .repopilot.json or returns default settings.
- */
 export function loadConfig(): RepoPilotConfig {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
       return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
     } catch {
-      // Return default on parse failure
+      // Fallback
     }
   }
   return {
@@ -34,9 +29,6 @@ export function loadConfig(): RepoPilotConfig {
   };
 }
 
-/**
- * Persists configuration to .repopilot.json.
- */
 export function saveConfig(config: RepoPilotConfig): boolean {
   try {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
@@ -55,22 +47,19 @@ export function printHeader(): void {
 
 export function printHelp(): void {
   printHeader();
-  console.log('Usage:');
-  console.log('  repopilot [options] [command]');
-  console.log('\nBuilt-in Mode Commands:');
-  console.log('  \x1b[32mrepopilot --enable turbo mode\x1b[0m      Activate Turbo Mode (autonomous execution)');
-  console.log('  \x1b[32mrepopilot --enable preview mode\x1b[0m    Activate Preview Mode (safe dry-run inspection)');
-  console.log('  \x1b[32mrepopilot --status\x1b[0m                 Display active mode and workspace state');
-  console.log('  \x1b[32mrepopilot --draft-commit\x1b[0m           Synthesize conventional commit for git changes');
-  console.log('  \x1b[32mrepopilot --help\x1b[0m                   Show this help menu');
-  console.log('\nAdding Your Own Commands:');
-  console.log('  Add custom scripts in \x1b[33m.repopilot.json\x1b[0m under "customCommands":');
-  console.log('    {');
-  console.log('      "customCommands": {');
-  console.log('        "audit": "npm test && git status"');
-  console.log('      }');
-  console.log('    }');
-  console.log('  Then run: \x1b[32mrepopilot audit\x1b[0m\n');
+  console.log('Core Mode Commands:');
+  console.log('  \x1b[32mrepopilot --enable turbo mode\x1b[0m      Autonomous workflow, checks & git push (halts on conflicts)');
+  console.log('  \x1b[32mrepopilot --enable preview mode\x1b[0m    Inspect code overview, routes, and system architecture');
+  console.log('\nGeneration & Presentation Commands:');
+  console.log('  \x1b[32mrepopilot --generate qna\x1b[0m           Generate hackathon Judge Q&A session guide (docs/JUDGE_QNA.md)');
+  console.log('  \x1b[32mrepopilot --generate pitch\x1b[0m         Generate timed 3-5 minute presentation script (docs/PITCH_SCRIPT.md)');
+  console.log('\nDiagnostic & Security Commands:');
+  console.log('  \x1b[32mrepopilot --check status\x1b[0m           Verify frontend-backend route contracts and API key safety');
+  console.log('  \x1b[32mrepopilot --check health\x1b[0m           Full security audit (dangerous calls, CORS, .env leaks)');
+  console.log('\nBonus Intelligent Tools:');
+  console.log('  \x1b[32mrepopilot --interactive-judge\x1b[0m     Live terminal interview with AI judge grading your defense');
+  console.log('  \x1b[32mrepopilot --fix-deps\x1b[0m              Autonomously append missing imports to requirements.txt');
+  console.log('  \x1b[32mrepopilot --help\x1b[0m                  Display this reference menu\n');
 }
 
 export function handleEnable(tokens: string[]): void {
@@ -81,90 +70,123 @@ export function handleEnable(tokens: string[]): void {
     config.mode = 'turbo';
     saveConfig(config);
     printHeader();
-    console.log('⚡ \x1b[1m\x1b[33mTurbo Mode Enabled\x1b[0m');
-    console.log('   Autonomous execution, fast-track validation & direct fixes are now active.');
-    console.log('   Configuration saved to \x1b[32m.repopilot.json\x1b[0m');
-    console.log('──────────────────────────────────────────────────\n');
+    console.log('⚡ \x1b[1m\x1b[33mTurbo Mode Activated\x1b[0m');
+    console.log('   Running pre-flight checks, conflict verification, and autonomous push...');
+    console.log('──────────────────────────────────────────────────');
+
+    const gitService = new GitService();
+    const result = gitService.executeTurboPush();
+
+    if (result.haltedForConflict) {
+      console.log('\n⚠️ \x1b[1m\x1b[31mCRITICAL: PUSH HALTED FOR GIT CONFLICT SAFETY!\x1b[0m');
+      console.log(`   ${result.message}`);
+      if (result.conflictedFiles && result.conflictedFiles.length > 0) {
+        console.log('   Conflicted Files:');
+        result.conflictedFiles.forEach((f) => console.log(`     • ${f}`));
+      }
+      console.log('   \x1b[33mAction Required: Resolve merge conflict markers (<<<<<<<) and commit manually.\x1b[0m\n');
+    } else if (result.success) {
+      console.log(`\n✔ \x1b[32mTurbo Push Succeeded:\x1b[0m ${result.message}\n`);
+    } else {
+      console.log(`\n✘ \x1b[31mTurbo Push Failed:\x1b[0m ${result.message}\n`);
+    }
   } else if (target.includes('preview')) {
     config.mode = 'preview';
     saveConfig(config);
     printHeader();
-    console.log('🔍 \x1b[1m\x1b[34mPreview Mode Enabled\x1b[0m');
-    console.log('   Interactive inspection, diff previewing & dry-runs are now active.');
-    console.log('   Configuration saved to \x1b[32m.repopilot.json\x1b[0m');
-    console.log('──────────────────────────────────────────────────\n');
+    console.log('🔍 \x1b[1m\x1b[34mPreview Mode Activated\x1b[0m');
+    
+    const generator = new GeneratorService();
+    const overview = generator.generateArchitectureOverview();
+    console.log(overview);
   } else {
-    console.error(`\n✘ Unknown mode "${target}". Expected "turbo mode" or "preview mode".`);
-    console.log('Example: repopilot --enable turbo mode\n');
+    console.error(`\n✘ Unknown mode "${target}". Use "turbo mode" or "preview mode".\n`);
     process.exit(1);
   }
 }
 
-export function handleStatus(): void {
-  const config = loadConfig();
-  printHeader();
-  console.log(`Current Mode:       ${config.mode === 'turbo' ? '⚡ \x1b[33mTurbo Mode\x1b[0m' : '🔍 \x1b[34mPreview Mode\x1b[0m'}`);
-  console.log(`Workspace Root:     ${process.cwd()}`);
-  console.log(`Configuration:      ${fs.existsSync(CONFIG_FILE) ? '.repopilot.json (present)' : 'Default (in-memory)'}`);
+export function handleGenerate(tokens: string[]): void {
+  const target = tokens.join(' ').toLowerCase().trim();
+  const generator = new GeneratorService();
 
-  const customKeys = Object.keys(config.customCommands || {});
-  if (customKeys.length > 0) {
-    console.log(`Custom Commands:    ${customKeys.join(', ')}`);
+  if (target.includes('qna')) {
+    printHeader();
+    console.log('🎯 \x1b[1mGenerating AI Judge Q&A Simulator Guide...\x1b[0m');
+    const { qnaPath } = generator.generateQnASession();
+    console.log(`✔ Created: \x1b[32m${qnaPath}\x1b[0m`);
+    console.log('   Includes high-scoring answers for Architecture, Scalability, Security, and Edge Cases.');
+    console.log('──────────────────────────────────────────────────\n');
+  } else if (target.includes('pitch')) {
+    printHeader();
+    console.log('🎤 \x1b[1mGenerating 3-5 Minute Hackathon Pitch Script...\x1b[0m');
+    const { scriptPath } = generator.generatePitchScript();
+    console.log(`✔ Created: \x1b[32m${scriptPath}\x1b[0m`);
+    console.log('   Includes Hook (0:45), Live Demo (2:15), Tech Deep Dive (3:15), and Closing.');
+    console.log('──────────────────────────────────────────────────\n');
+  } else {
+    console.error(`\n✘ Unknown generator command "${target}". Use "--generate qna" or "--generate pitch".\n`);
+    process.exit(1);
   }
-  console.log('──────────────────────────────────────────────────\n');
 }
 
-export function handleDraftCommit(): void {
-  printHeader();
-  try {
-    const status = execSync('git status --porcelain', { encoding: 'utf8' }).trim();
-    if (!status) {
-      console.log('ℹ No git changes detected.');
-      return;
+export function handleCheck(tokens: string[]): void {
+  const target = tokens.join(' ').toLowerCase().trim();
+
+  if (target.includes('status')) {
+    printHeader();
+    console.log('🔍 \x1b[1mChecking API Contracts & Secret Safety...\x1b[0m');
+    console.log('──────────────────────────────────────────────────');
+    const checker = new ContractChecker();
+    const report = checker.checkSystemStatus();
+
+    console.log(`Backend Endpoints:   ${report.backendRoutesCount} defined`);
+    console.log(`Frontend API Calls:  ${report.frontendCallsCount} detected`);
+    console.log(`Connected Routes:    \x1b[32m${report.connectedCount} healthy\x1b[0m`);
+    
+    if (report.orphanedCount > 0) {
+      console.log(`Orphaned Routes:     \x1b[31m${report.orphanedCount} unmatched\x1b[0m`);
+      report.details.unmatchedFrontendCalls.forEach((c) => {
+        console.log(`  • [${c.file}:${c.line}] ${c.rawRoute} has NO backend endpoint!`);
+      });
     }
-    const lines = status.split('\n');
-    console.log(`Found ${lines.length} changed file(s):`);
-    lines.forEach((l) => console.log(`  • ${l}`));
-    console.log('\n💡 Suggested commit message:');
-    if (status.includes('requirements.txt') || status.includes('package.json')) {
-      console.log('  \x1b[32mfix(deps): update project dependencies\x1b[0m');
-    } else if (status.includes('.py') || status.includes('/api/')) {
-      console.log('  \x1b[32mfeat(api): update backend routes and handlers\x1b[0m');
-    } else if (status.includes('.md')) {
-      console.log('  \x1b[32mdocs: update repository documentation\x1b[0m');
-    } else {
-      console.log('  \x1b[32mfeat: update workspace modules\x1b[0m');
+
+    console.log(`\nAPI Keys Security:   ${report.areApiKeysSafe ? '\x1b[32m✔ All keys safe\x1b[0m' : '\x1b[31m🚨 Exposed keys detected!\x1b[0m'}`);
+    console.log(`Summary:             ${report.summary}`);
+    console.log('──────────────────────────────────────────────────\n');
+  } else if (target.includes('health')) {
+    printHeader();
+    console.log('🛡️ \x1b[1mRunning Security & Vulnerability Audit...\x1b[0m');
+    console.log('──────────────────────────────────────────────────');
+    const scanner = new SecurityScanner();
+    const report = scanner.runFullSecurityAudit();
+
+    console.log(`Total Findings:      ${report.totalFindings}`);
+    console.log(`Critical Risks:      ${report.criticalCount > 0 ? `\x1b[31m${report.criticalCount}\x1b[0m` : '\x1b[32m0\x1b[0m'}`);
+    console.log(`High Priority:       ${report.highCount > 0 ? `\x1b[33m${report.highCount}\x1b[0m` : '0'}`);
+    console.log(`Medium Priority:     ${report.mediumCount}`);
+    console.log(`\n${report.summaryMessage}`);
+
+    if (report.findings.length > 0) {
+      console.log('\nDetails:');
+      report.findings.forEach((f) => {
+        const color = f.severity === 'CRITICAL' ? '\x1b[31m' : f.severity === 'HIGH' ? '\x1b[33m' : '\x1b[36m';
+        console.log(`  • ${color}[${f.severity}]\x1b[0m ${f.file}:${f.line} -> ${f.recommendation}`);
+      });
     }
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`✘ Git error: ${message}`);
-  }
-  console.log('──────────────────────────────────────────────────\n');
-}
-
-export function runCustomCommand(commandName: string, script: string): void {
-  printHeader();
-  console.log(`Running custom command: \x1b[32m${commandName}\x1b[0m -> "${script}"`);
-  console.log('──────────────────────────────────────────────────');
-  try {
-    execSync(script, { stdio: 'inherit', cwd: process.cwd() });
-  } catch (err: unknown) {
-    const status = typeof err === 'object' && err !== null && 'status' in err ? (err as { status?: number }).status : 1;
-    console.error(`✘ Command failed with exit code ${status || 1}`);
-    process.exit(status || 1);
+    console.log('──────────────────────────────────────────────────\n');
+  } else {
+    console.error(`\n✘ Unknown check target "${target}". Use "--check status" or "--check health".\n`);
+    process.exit(1);
   }
 }
 
-/**
- * Main CLI router.
- */
-export function runCli(argv = process.argv.slice(2)): void {
+export async function runCli(argv = process.argv.slice(2)): Promise<void> {
   if (argv.length === 0 || argv.includes('--help') || argv.includes('-h')) {
     printHelp();
     return;
   }
 
-  // Parse: repopilot --enable turbo mode
+  // 1. repopilot --enable turbo mode / preview mode
   const enableIndex = argv.indexOf('--enable');
   if (enableIndex !== -1) {
     const tokens = argv.slice(enableIndex + 1);
@@ -172,40 +194,66 @@ export function runCli(argv = process.argv.slice(2)): void {
     return;
   }
 
-  // Shortcuts: repopilot --turbo or repopilot --preview
-  if (argv.includes('--turbo')) {
-    handleEnable(['turbo', 'mode']);
-    return;
-  }
-  if (argv.includes('--preview')) {
-    handleEnable(['preview', 'mode']);
-    return;
-  }
-
-  if (argv.includes('--status') || argv[0] === 'status') {
-    handleStatus();
+  // 2. repopilot --generate qna / pitch
+  const genIndex = argv.indexOf('--generate');
+  if (genIndex !== -1) {
+    const tokens = argv.slice(genIndex + 1);
+    handleGenerate(tokens);
     return;
   }
 
-  if (argv.includes('--draft-commit') || argv[0] === 'draft-commit') {
-    handleDraftCommit();
+  // 3. repopilot --check status / health
+  const checkIndex = argv.indexOf('--check');
+  if (checkIndex !== -1) {
+    const tokens = argv.slice(checkIndex + 1);
+    handleCheck(tokens);
     return;
   }
 
-  // Check custom commands in .repopilot.json
+  // 4. repopilot --interactive-judge
+  if (argv.includes('--interactive-judge') || argv[0] === 'judge') {
+    const judge = new InteractiveJudge();
+    await judge.startSession();
+    return;
+  }
+
+  // 5. repopilot --fix-deps
+  if (argv.includes('--fix-deps')) {
+    printHeader();
+    console.log('📦 \x1b[1mAutonomously Fixing Missing Dependencies...\x1b[0m');
+    const fixer = new DepFixer();
+    const result = fixer.fixMissingDependencies();
+    if (result.added.length > 0) {
+      console.log(`✔ Successfully added ${result.added.length} package(s) to requirements.txt:`);
+      result.added.forEach((p) => console.log(`   + ${p}`));
+    } else {
+      console.log('✔ All Python imports are already accounted for in requirements.txt.');
+    }
+    console.log('──────────────────────────────────────────────────\n');
+    return;
+  }
+
+  // Custom commands from .repopilot.json
   const config = loadConfig();
   const customCmd = argv[0];
   if (config.customCommands && config.customCommands[customCmd]) {
-    runCustomCommand(customCmd, config.customCommands[customCmd]);
+    printHeader();
+    console.log(`Running custom command: \x1b[32m${customCmd}\x1b[0m`);
+    console.log('──────────────────────────────────────────────────');
+    try {
+      execSync(config.customCommands[customCmd], { stdio: 'inherit', cwd: process.cwd() });
+    } catch (err: unknown) {
+      const status = typeof err === 'object' && err !== null && 'status' in err ? (err as { status?: number }).status : 1;
+      process.exit(status || 1);
+    }
     return;
   }
 
-  console.error(`\n✘ Unknown command or flag: "${argv.join(' ')}"`);
+  console.error(`\n✘ Unknown command: "${argv.join(' ')}"`);
   console.log('Run \x1b[32mrepopilot --help\x1b[0m to view available commands.\n');
   process.exit(1);
 }
 
-// Auto-run if executed as script
 if (require.main === module) {
   runCli();
 }

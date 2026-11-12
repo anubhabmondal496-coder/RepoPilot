@@ -40,6 +40,36 @@
         "category": "RepoPilot"
       },
       {
+        "command": "repopilot.generateQnA",
+        "title": "Generate Judge Q&A Guide",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.generatePitch",
+        "title": "Generate 3-5 Min Pitch Script",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.checkStatus",
+        "title": "Check API Contracts & Secret Safety",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.checkHealth",
+        "title": "Run Security & Vulnerability Audit",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.interactiveJudge",
+        "title": "Start Interactive Judge Simulator",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.fixDeps",
+        "title": "Fix Missing Dependencies",
+        "category": "RepoPilot"
+      },
+      {
         "command": "repopilot.turboMode",
         "title": "Run Turbo Mode",
         "category": "RepoPilot"

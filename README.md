@@ -1,7 +1,7 @@
 # 🚀 RepoPilot
 
-> **Intelligent Autonomous Repository Co-Pilot & Automation Engine**  
-> Streamlining repository management, code inspection, intelligent documentation synthesis, and end-to-end hackathon / project submission workflows.
+> **Autonomous Repository Co-Pilot & Automation Engine**  
+> Streamline workspace health, automated semantic git workflows, and dual-mode execution via CLI and VS Code.
 
 ---
 
@@ -10,79 +10,48 @@
 </p>
 
 <p align="center">
-  <b>Figure 1:</b> <em>RepoPilot End-to-End Architecture Flowchart</em>
+  <b>Figure 1:</b> <em>RepoPilot Architecture & Execution Flow</em>
 </p>
 
 ---
 
 ## 📌 Overview
 
-**RepoPilot** is an agentic AI developer co-pilot engineered to automate end-to-end repository maintenance and submission preparation. From executing everyday Git routines and API route audits to refactoring project hierarchies and simulating technical judge Q&A sessions, RepoPilot bridges developer intent with verified, production-ready deliverables.
+**RepoPilot** is a developer tool and VS Code extension that automates repository maintenance, monitors code health, and streamlines Git workflows. It features a **Hybrid Execution Engine** allowing seamless switching between safe, interactive dry-runs (**Preview Mode**) and high-velocity autonomous task execution (**Turbo Mode**).
 
-Powered by a **Hybrid Execution Engine** and a multi-model **Agent Brain**, RepoPilot allows developers to toggle between safe interactive previews and high-velocity autonomous runs, all validated against strict runtime schemas.
+### Key Capabilities
+- **Dual-Mode Engine**: Toggle between Preview Mode (safe inspection) and Turbo Mode (autonomous execution).
+- **Semantic Commit Drafter**: Auto-generates conventional commit messages based on staged and unstaged file diffs.
+- **Passive Workspace Monitoring**: Tracks dependency integrity and checks API contracts directly inside VS Code.
+- **Custom Workflow Automation**: Define and run project-specific scripts via `.repopilot.json`.
 
 ---
 
 ## 🏛️ System Architecture
 
-The RepoPilot pipeline is organized into five core stages as illustrated in the system architecture diagram:
-
-```
-┌──────────────────┐     ┌────────────────┐     ┌────────────────┐     ┌──────────────┐     ┌────────────────────────┐
-│ User Requirements│ ──► │  Hybrid Engine │ ──► │  Agent Brain   │ ──► │ Verification │ ──► │ Deliverables & Stage   │
-└──────────────────┘     └────────────────┘     └────────────────┘     └──────────────┘     └────────────────────────┘
-```
-
-### 1. 🎯 User Requirements (Input Modules)
-RepoPilot captures developer tasks through terminal triggers and workspace analysis:
-- **Checks Git Status & Pushes**: Tracks working tree state, automates meaningful stage/commit messages, and handles remote synchronization.
-- **Checks API Route**: Inspects endpoint signatures, verifies HTTP handlers, and checks payload integrity across backend routes.
-- **Finds Bugs in the Code**: Identifies syntax issues, semantic regressions, unhandled exceptions, and runtime anti-patterns.
-- **Organizes VS Code File Structure**: Restructures messy repositories into standardized, modular, and maintainable folder hierarchies conforming to modern framework conventions.
-
-### 2. ⚡ Hybrid Engine
-A dual-mode operational switch that balances safety with developer speed:
-- **Preview Mode**: Interactive dry-run mode providing diffs, command dry-runs, and human-in-the-loop confirmation before making file modifications or executing critical scripts.
-- **Turbo Mode**: Autonomous accelerated execution mode that batches tasks, directly applies validated code fixes, and executes multi-step workflows with minimal friction.
-
-### 3. 🧠 Agent Brain (Model Orchestration Layer)
-A specialized multi-agent consensus and automation layer:
-- **Gemini 1.5 Flash**: Delivers rapid multimodal analysis, high-context comprehension for extensive codebases, and powers technical documentation drafting.
-- **Groq (Llama-3.3-70B)**: Ultra-low latency reasoning engine tailored for lightning-fast code analysis, deep bug hunting, and structural refactoring.
-- **Playwright Automator**: Headless browser automation agent capable of navigating web portals, scraping submission forms, inserting project metadata, and managing automated submissions.
-
-### 4. 🛡️ Verification & Guardrails
-Ensures system stability and prevents hallucinated actions or malformed outputs:
-- **Zod Schemas**: Strict schema validation enforcing typed contracts for all agent outputs, tool calls, and API responses.
-- **Documentation Pipeline**: Verifies markdown integrity, cross-references internal links, and ensures technical accuracy across generated docs.
-
-### 5. 📦 Deliverables & Stages
-Produces concrete, review-ready artifacts:
-- **Documentation Suite & Visualization**: Comprehensive architecture guides, interactive diagrams, and API references.
-- **README.md & Markdown Files Updation**: Dynamic synchronization of `README.md`, changelogs, setup instructions, and contributing guidelines.
-- **AI Judge Q&A Simulator**: Interactive evaluator simulating pitch reviews and hackathon judging criteria, providing critical feedback and sample defense Q&A.
+RepoPilot follows a 5-stage pipeline (illustrated in Figure 1):
+1. **User Requirements**: Terminal commands and VS Code workspace triggers.
+2. **Hybrid Engine**: Runtime mode router managing **Preview Mode** and **Turbo Mode**.
+3. **Agent Brain**: Multi-agent consensus layer for code analysis and task coordination.
+4. **Verification & Guardrails**: Schema validation and safety checks before changes are applied.
+5. **Deliverables**: Semantic commits, updated documentation, and validated repository state.
 
 ---
 
-## 🛠️ Tech Stack & Integrations
+## 🛠️ Tech Stack
 
-| Layer | Technologies & Frameworks |
-|---|---|
-| **Core Runtime** | Node.js / TypeScript |
-| **Agent Intelligence** | Google Gemini 1.5 Flash, Groq (Llama-3.3-70B) |
-| **Browser Automation** | Playwright |
-| **Data Validation** | Zod |
-| **Version Control** | Git & GitHub CLI |
-| **Workspace & Editor** | VS Code Environment & Extensions |
+- **Runtime**: Node.js & TypeScript
+- **Editor Integration**: VS Code Extension API
+- **Build Tooling**: esbuild & tsc
+- **Version Control**: Git CLI
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v18.0.0 or higher)
-- Git (configured locally)
-- API Keys for Google Gemini and Groq
+- [Node.js](https://nodejs.org/) (v18.0.0 or higher)
+- [Git](https://git-scm.com/) configured locally
 
 ### Installation
 
@@ -92,78 +61,174 @@ Produces concrete, review-ready artifacts:
    cd RepoPilot
    ```
 
-2. **Install dependencies:**
+2. **Install dependencies and compile:**
    ```bash
    npm install
+   npm run compile
    ```
 
-3. **Configure Environment Variables:**
-   Create a `.env` file in the root directory:
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   GROQ_API_KEY=your_groq_api_key_here
-   HEADLESS_BROWSER=true
+3. **(Optional) Link CLI globally:**
+   ```bash
+   npm link
    ```
+   *You can now execute `repopilot` directly from any terminal. Alternatively, use `npx repopilot` or `node bin/repopilot.js`.*
 
 ---
 
-## 💻 Usage
+## 💻 Command Reference & Usage
 
-### Running RepoPilot via Terminal Command
+RepoPilot provides commands through both its **Command-Line Interface (CLI)** and the **VS Code Command Palette**.
 
-Launch RepoPilot with your desired operational mode:
+### 1. CLI Commands
 
-#### 1. Preview Mode (Safe / Interactive)
-```bash
-npx repopilot --preview
-```
-*Allows you to inspect proposed Git operations, code fixes, and file restructuring before changes are applied.*
+Run commands using `repopilot <command>`, `npx repopilot <command>`, or `node bin/repopilot.js <command>`.
 
-#### 2. Turbo Mode (Autonomous Fast-Track)
-```bash
-npx repopilot --turbo
-```
-*Autonomously processes repository issues, updates documentation, runs verification schemas, and commits approved changes.*
+| Command / Flag | Shortcut | Description |
+|---|---|---|
+| `repopilot --enable turbo mode` | `repopilot --turbo` | Switch to Turbo Mode (autonomous execution) |
+| `repopilot --enable preview mode` | `repopilot --preview` | Switch to Preview Mode (safe dry-run inspection) |
+| `repopilot --status` | `repopilot status` | Display active mode and workspace state |
+| `repopilot --draft-commit` | `repopilot draft-commit` | Analyze git changes and suggest semantic commit message |
+| `repopilot <custom-command>` | — | Execute a custom script configured in `.repopilot.json` |
+| `repopilot --help` | `repopilot -h` | Display the CLI help menu |
 
 ---
 
-## 📋 Core Workflows
+#### ⚡ Mode Switching Commands
 
-### 🔍 Code & API Health Check
-```bash
-npx repopilot check --routes --bugs
-```
-Scans routes for broken references and executes deep static bug detection powered by **Llama-3.3-70B** on Groq.
+Control the operational state of the Hybrid Engine. Changes are persisted to `.repopilot.json` and sync with the VS Code status bar in real time.
 
-### 📁 VS Code Structure Optimization
-```bash
-npx repopilot organize
-```
-Analyzes root directory layout and moves misplaced configs, assets, and source files into recommended conventions.
+- **Enable Turbo Mode:**
+  ```bash
+  repopilot --enable turbo mode
+  # or
+  repopilot --turbo
+  ```
+  *Output:*
+  ```text
+  🚀 RepoPilot CLI [Hybrid Engine]
+  ──────────────────────────────────────────────────
+  ⚡ Turbo Mode Enabled
+     Autonomous execution, fast-track validation & direct fixes are now active.
+     Configuration saved to .repopilot.json
+  ```
 
-### 📝 Automated Documentation Generation
-```bash
-npx repopilot docs --generate
-```
-Synthesizes project changes using **Gemini 1.5 Flash**, updates `README.md` and related markdown guides, and validates structure through **Zod Schemas**.
+- **Enable Preview Mode:**
+  ```bash
+  repopilot --enable preview mode
+  # or
+  repopilot --preview
+  ```
+  *Output:*
+  ```text
+  🚀 RepoPilot CLI [Hybrid Engine]
+  ──────────────────────────────────────────────────
+  🔍 Preview Mode Enabled
+     Interactive inspection, diff previewing & dry-runs are now active.
+     Configuration saved to .repopilot.json
+  ```
 
-### 🤖 Hackathon & Submission Automator
+---
+
+#### 📊 Workspace Status Command
+
+Check the currently active engine mode, workspace root directory, config file status, and registered custom commands:
+
 ```bash
-npx repopilot submit --platform <devpost|mlh|custom>
-npx repopilot simulate-judge
+repopilot --status
+# or
+repopilot status
 ```
-Employs the **Playwright Automator** to scrape submission fields and insert project data, while launching the **AI Judge Q&A Simulator** to prepare you for technical defense.
+
+*Example Output:*
+```text
+🚀 RepoPilot CLI [Hybrid Engine]
+──────────────────────────────────────────────────
+Current Mode:       ⚡ Turbo Mode
+Workspace Root:     /path/to/project
+Configuration:      .repopilot.json (present)
+Custom Commands:    audit, lint-fix
+──────────────────────────────────────────────────
+```
+
+---
+
+#### ✍️ Semantic Commit Drafter
+
+Scans modified and untracked files via `git status` and proposes conventional commits (`feat:`, `fix(deps):`, `feat(api):`, `docs:`, etc.):
+
+```bash
+repopilot --draft-commit
+# or
+repopilot draft-commit
+```
+
+*Example Output:*
+```text
+🚀 RepoPilot CLI [Hybrid Engine]
+──────────────────────────────────────────────────
+Found 2 changed file(s):
+  • M src/cli/index.ts
+  • M README.md
+
+💡 Suggested commit message:
+  docs: update repository documentation
+──────────────────────────────────────────────────
+```
+
+---
+
+#### ⚙️ Custom Commands (`.repopilot.json`)
+
+Define project-specific scripts inside `.repopilot.json` under `"customCommands"` to run complex workflows with short aliases:
+
+```json
+{
+  "mode": "preview",
+  "customCommands": {
+    "audit": "npm test && git status",
+    "lint-fix": "npm run lint -- --fix",
+    "build-all": "npm run compile && npm run package"
+  }
+}
+```
+
+Run custom commands directly by name:
+```bash
+repopilot audit
+repopilot lint-fix
+```
+
+---
+
+### 2. VS Code Extension Commands
+
+Access these commands from the VS Code **Command Palette** (`Ctrl+Shift+P` on Windows/Linux or `Cmd+Shift+P` on macOS):
+
+| Command Palette Title | Internal ID | Action |
+|---|---|---|
+| `RepoPilot: Enable Turbo Mode` | `repopilot.enableTurboMode` | Switches engine to Turbo Mode and updates status bar |
+| `RepoPilot: Enable Preview Mode` | `repopilot.enablePreviewMode` | Switches engine to Preview Mode and updates status bar |
+| `RepoPilot: Draft Semantic Commit` | `repopilot.draftCommit` | Generates semantic commit message and pastes it into the SCM input box |
+| `RepoPilot: Run Turbo Mode` | `repopilot.turboMode` | Triggers autonomous execution pipeline |
+| `RepoPilot: Run Sprint Logistics` | `repopilot.sprintLogistics` | Triggers submission & sprint logistics routines |
+
+#### 🔘 Status Bar Toggle
+
+RepoPilot adds an interactive item to the bottom-right of the VS Code status bar:
+- When in Turbo Mode: Displays **`$(zap) RepoPilot: Turbo`** (with warning accent). Clicking toggles to Preview Mode.
+- When in Preview Mode: Displays **`$(eye) RepoPilot: Preview`**. Clicking toggles to Turbo Mode.
 
 ---
 
 ## 🗺️ Roadmap
 
-- [x] Initial architecture definition & diagram design
-- [ ] Hybrid Engine CLI implementation (`--preview` vs `--turbo`)
-- [ ] Agent Brain routing (Gemini 1.5 Flash + Groq Llama-3.3-70B)
-- [ ] Zod schema validator enforcement for agent tool calls
-- [ ] Playwright web submission automator integration
-- [ ] AI Judge interactive terminal evaluation module
+- [x] Hybrid Engine CLI architecture (`--preview` vs `--turbo`)
+- [x] Config persistence via `.repopilot.json`
+- [x] Semantic Git commit synthesis
+- [x] VS Code status bar mode switcher & command integration
+- [ ] Automated API contract verification CLI integration
+- [ ] Interactive Judge Q&A terminal simulation
 
 ---
 
