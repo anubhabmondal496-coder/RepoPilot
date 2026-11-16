@@ -8,6 +8,7 @@ import { DepFixer } from './services/depFixer';
 import { GitService } from './services/gitService';
 import { GeminiClient } from './ai/geminiClient';
 import { TurboModeRunner } from './commands/turboMode';
+import { BugFixerEngine } from './services/bugFixerEngine';
 
 let healthMonitorInstance: HealthMonitor | undefined;
 let statusBarItem: vscode.StatusBarItem | undefined;
@@ -106,15 +107,19 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('repopilot.enableTurboMode', async () => {
       await setMode('turbo');
       await updateStatusBar();
+      const apiKey = await GeminiClient.getApiKey(context);
+      const bugFixer = new BugFixerEngine(rootPath, apiKey);
+      const fixResult = await bugFixer.executePipeline({ mode: 'turbo' });
+
       const gitService = new GitService(rootPath);
       const result = gitService.executeTurboPush();
 
       if (result.haltedForConflict) {
         vscode.window.showErrorMessage(`⚠️ RepoPilot Turbo Push Halted: ${result.message}`);
-      } else if (result.success) {
-        vscode.window.showInformationMessage(`⚡ RepoPilot Turbo Mode: ${result.message}`);
       } else {
-        vscode.window.showWarningMessage(`⚡ RepoPilot Turbo Mode: ${result.message}`);
+        vscode.window.showInformationMessage(
+          `⚡ RepoPilot Turbo Mode: Fixed ${fixResult.bugsFixedCount}/${fixResult.totalBugsFound} issue(s). ${result.message}`
+        );
       }
     })
   );
@@ -123,11 +128,36 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('repopilot.enablePreviewMode', async () => {
       await setMode('preview');
       await updateStatusBar();
+      const apiKey = await GeminiClient.getApiKey(context);
+      const bugFixer = new BugFixerEngine(rootPath, apiKey);
+
+      const fixResult = await bugFixer.executePipeline({
+        mode: 'preview',
+        onPromptConsent: async (bugs) => {
+          if (bugs.length === 0) {
+            return false;
+          }
+          const choice = await vscode.window.showInformationMessage(
+            `RepoPilot Preview Mode: Discovered ${bugs.length} issue(s) across code, security & documentation. Apply fixes now?`,
+            'Apply Fixes',
+            'Keep As Is (Dry-Run Only)'
+          );
+          return choice === 'Apply Fixes';
+        }
+      });
+
       const generator = new GeneratorService(rootPath);
       const overview = generator.generateArchitectureOverview();
       outputChannel.appendLine(overview);
       outputChannel.show();
-      vscode.window.showInformationMessage('🔍 RepoPilot: Preview Mode enabled (Safe architecture inspection).');
+
+      if (fixResult.userConsented && fixResult.bugsFixedCount > 0) {
+        vscode.window.showInformationMessage(
+          `✔ RepoPilot Preview Mode: Applied ${fixResult.bugsFixedCount} fix(es) with your consent.`
+        );
+      } else {
+        vscode.window.showInformationMessage('🔍 RepoPilot: Preview Mode active (Safe dry-run inspection kept).');
+      }
     })
   );
 

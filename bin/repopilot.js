@@ -10,7 +10,12 @@ const distCli = path.join(__dirname, '..', 'dist', 'cli.js');
 
 if (fs.existsSync(distCli)) {
   const { runCli } = require(distCli);
-  runCli();
+  runCli()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 } else {
   // Fallback to TypeScript source execution or error if dist is not compiled
   console.error('✘ RepoPilot CLI distribution not found. Please run "npm run compile" first.');

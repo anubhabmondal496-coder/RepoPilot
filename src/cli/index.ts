@@ -4,10 +4,12 @@ import { execSync } from 'child_process';
 import { GitService } from '../services/gitService';
 import { SecurityScanner } from '../services/securityScanner';
 import { ContractChecker } from '../services/contractChecker';
+import * as readline from 'readline';
 import { GeneratorService } from '../services/generatorService';
 import { InteractiveJudge } from '../services/interactiveJudge';
 import { DepFixer } from '../services/depFixer';
 import { runTurboCore } from '../services/turboEngine';
+import { BugFixerEngine } from '../services/bugFixerEngine';
 
 export interface RepoPilotConfig {
   mode: 'turbo' | 'preview';
@@ -91,28 +93,19 @@ export async function handleEnable(tokens: string[]): Promise<void> {
     saveConfig(config);
     printHeader();
     console.log('⚡ \x1b[1m\x1b[33mTurbo Mode Activated\x1b[0m');
+    console.log('   Autonomous search & fix engine: repairing bugs, dependencies, security & docs...');
     console.log('──────────────────────────────────────────────────');
 
-    // 1. If Gemini API key is available, synthesize project architecture and specs
     const apiKey = getCliGeminiApiKey();
-    if (apiKey) {
-      console.log('🤖 \x1b[1mSynthesizing Project Architecture & Specs with Gemini AI...\x1b[0m');
-      try {
-        const turboResult = await runTurboCore(process.cwd(), apiKey);
-        console.log('\n✨ \x1b[1m\x1b[32mGemini Analysis & Modifications Applied to README.md:\x1b[0m');
-        console.log(turboResult.modifiedSummary);
-        console.log('──────────────────────────────────────────────────');
-      } catch (geminiErr: unknown) {
-        const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
-        console.log(`\x1b[33m⚠️ Gemini synthesis note:\x1b[0m ${msg}`);
-      }
-    } else {
+    if (!apiKey) {
       console.log('ℹ️ \x1b[33mGemini API key not detected in environment or .env.\x1b[0m');
-      console.log('   To enable autonomous Gemini README & architecture generation:');
-      console.log('   • Set $env:GEMINI_API_KEY="AIzaSy..." in PowerShell');
-      console.log('   • Or add GEMINI_API_KEY=AIzaSy... to a .env file in project root');
-      console.log('   • Or run inside VS Code via "RepoPilot: Set Gemini API Key"\n');
+      console.log('   Running static bug fixes & security patching without generative AI.');
+      console.log('   (Set $env:GEMINI_API_KEY="AIzaSy..." to enable Gemini AI code synthesis)\n');
     }
+
+    // 1. Simultaneously search and fix all bugs across codebase
+    const bugFixer = new BugFixerEngine(process.cwd(), apiKey);
+    await bugFixer.executePipeline({ mode: 'turbo' });
 
     // 2. Run conflict verification and push
     console.log('🚀 Running pre-flight conflict verification & autonomous push...');
@@ -137,7 +130,29 @@ export async function handleEnable(tokens: string[]): Promise<void> {
     saveConfig(config);
     printHeader();
     console.log('🔍 \x1b[1m\x1b[34mPreview Mode Activated\x1b[0m');
-    
+    console.log('   Auditing codebase for bugs, broken contracts, security & docs with user consent...');
+    console.log('──────────────────────────────────────────────────');
+
+    const apiKey = getCliGeminiApiKey();
+    const bugFixer = new BugFixerEngine(process.cwd(), apiKey);
+
+    await bugFixer.executePipeline({
+      mode: 'preview',
+      onPromptConsent: async (bugs) => {
+        if (bugs.length === 0) {
+          return false;
+        }
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await new Promise<string>((resolve) => {
+          rl.question('\n❓ \x1b[1mWould you like RepoPilot to apply these proposed fixes to your workspace? (y/N):\x1b[0m ', (ans) => {
+            rl.close();
+            resolve(ans.trim().toLowerCase());
+          });
+        });
+        return answer === 'y' || answer === 'yes';
+      }
+    });
+
     const generator = new GeneratorService();
     const overview = generator.generateArchitectureOverview();
     console.log(overview);
@@ -297,5 +312,10 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
 }
 
 if (require.main === module) {
-  runCli();
+  runCli()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }
