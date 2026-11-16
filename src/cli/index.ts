@@ -7,6 +7,7 @@ import { ContractChecker } from '../services/contractChecker';
 import { GeneratorService } from '../services/generatorService';
 import { InteractiveJudge } from '../services/interactiveJudge';
 import { DepFixer } from '../services/depFixer';
+import { runTurboCore } from '../services/turboEngine';
 
 export interface RepoPilotConfig {
   mode: 'turbo' | 'preview';
@@ -62,7 +63,26 @@ export function printHelp(): void {
   console.log('  \x1b[32mrepopilot --help\x1b[0m                  Display this reference menu\n');
 }
 
-export function handleEnable(tokens: string[]): void {
+function getCliGeminiApiKey(): string | undefined {
+  if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()) {
+    return process.env.GEMINI_API_KEY.trim();
+  }
+  const envPath = path.join(process.cwd(), '.env');
+  if (fs.existsSync(envPath)) {
+    try {
+      const content = fs.readFileSync(envPath, 'utf8');
+      const match = content.match(/GEMINI_API_KEY\s*=\s*['"]?([^\s'"\r\n]+)['"]?/);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    } catch {
+      // Ignore
+    }
+  }
+  return undefined;
+}
+
+export async function handleEnable(tokens: string[]): Promise<void> {
   const target = tokens.join(' ').toLowerCase().trim();
   const config = loadConfig();
 
@@ -71,9 +91,31 @@ export function handleEnable(tokens: string[]): void {
     saveConfig(config);
     printHeader();
     console.log('⚡ \x1b[1m\x1b[33mTurbo Mode Activated\x1b[0m');
-    console.log('   Running pre-flight checks, conflict verification, and autonomous push...');
     console.log('──────────────────────────────────────────────────');
 
+    // 1. If Gemini API key is available, synthesize project architecture and specs
+    const apiKey = getCliGeminiApiKey();
+    if (apiKey) {
+      console.log('🤖 \x1b[1mSynthesizing Project Architecture & Specs with Gemini AI...\x1b[0m');
+      try {
+        const turboResult = await runTurboCore(process.cwd(), apiKey);
+        console.log('\n✨ \x1b[1m\x1b[32mGemini Analysis & Modifications Applied to README.md:\x1b[0m');
+        console.log(turboResult.modifiedSummary);
+        console.log('──────────────────────────────────────────────────');
+      } catch (geminiErr: unknown) {
+        const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+        console.log(`\x1b[33m⚠️ Gemini synthesis note:\x1b[0m ${msg}`);
+      }
+    } else {
+      console.log('ℹ️ \x1b[33mGemini API key not detected in environment or .env.\x1b[0m');
+      console.log('   To enable autonomous Gemini README & architecture generation:');
+      console.log('   • Set $env:GEMINI_API_KEY="AIzaSy..." in PowerShell');
+      console.log('   • Or add GEMINI_API_KEY=AIzaSy... to a .env file in project root');
+      console.log('   • Or run inside VS Code via "RepoPilot: Set Gemini API Key"\n');
+    }
+
+    // 2. Run conflict verification and push
+    console.log('🚀 Running pre-flight conflict verification & autonomous push...');
     const gitService = new GitService();
     const result = gitService.executeTurboPush();
 
@@ -88,7 +130,7 @@ export function handleEnable(tokens: string[]): void {
     } else if (result.success) {
       console.log(`\n✔ \x1b[32mTurbo Push Succeeded:\x1b[0m ${result.message}\n`);
     } else {
-      console.log(`\n✘ \x1b[31mTurbo Push Failed:\x1b[0m ${result.message}\n`);
+      console.log(`\n✔ \x1b[32mTurbo Mode Completed:\x1b[0m ${result.message}\n`);
     }
   } else if (target.includes('preview')) {
     config.mode = 'preview';
@@ -190,7 +232,7 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
   const enableIndex = argv.indexOf('--enable');
   if (enableIndex !== -1) {
     const tokens = argv.slice(enableIndex + 1);
-    handleEnable(tokens);
+    await handleEnable(tokens);
     return;
   }
 

@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 export const GEMINI_API_KEY_SECRET = 'repopilot.geminiApiKey';
 
@@ -18,15 +18,30 @@ export interface GeminiModelClient {
   };
 }
 
+function getVSCode(): typeof import('vscode') | undefined {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('vscode');
+  } catch {
+    return undefined;
+  }
+}
+
 export class GeminiClient {
   /**
    * Retrieves the Gemini API key from VS Code SecretStorage or environment fallback.
    */
-  public static async getApiKey(context: vscode.ExtensionContext): Promise<string | undefined> {
-    // 1. Try VS Code SecretStorage
-    const secretKey = await context.secrets.get(GEMINI_API_KEY_SECRET);
-    if (secretKey && secretKey.trim()) {
-      return secretKey.trim();
+  public static async getApiKey(context?: vscode.ExtensionContext): Promise<string | undefined> {
+    // 1. Try VS Code SecretStorage if context is available
+    if (context) {
+      try {
+        const secretKey = await context.secrets.get(GEMINI_API_KEY_SECRET);
+        if (secretKey && secretKey.trim()) {
+          return secretKey.trim();
+        }
+      } catch {
+        // Fallback
+      }
     }
 
     // 2. Try process.env fallback
@@ -41,7 +56,12 @@ export class GeminiClient {
    * Securely prompts user for Gemini API Key and stores it in SecretStorage.
    */
   public static async setApiKey(context: vscode.ExtensionContext): Promise<string | undefined> {
-    const input = await vscode.window.showInputBox({
+    const vsc = getVSCode();
+    if (!vsc) {
+      return undefined;
+    }
+
+    const input = await vsc.window.showInputBox({
       title: 'RepoPilot: Set Google Gemini API Key',
       prompt: 'Enter your Gemini API key (stored securely in VS Code SecretStorage)',
       password: true,
@@ -55,7 +75,7 @@ export class GeminiClient {
 
     const key = input.trim();
     await context.secrets.store(GEMINI_API_KEY_SECRET, key);
-    vscode.window.showInformationMessage('RepoPilot: Gemini API key has been securely stored.');
+    vsc.window.showInformationMessage('RepoPilot: Gemini API key has been securely stored.');
     return key;
   }
 
@@ -68,7 +88,12 @@ export class GeminiClient {
       return existingKey;
     }
 
-    const selection = await vscode.window.showWarningMessage(
+    const vsc = getVSCode();
+    if (!vsc) {
+      return undefined;
+    }
+
+    const selection = await vsc.window.showWarningMessage(
       'RepoPilot: Google Gemini API key is required to run Turbo Mode.',
       'Enter API Key',
       'Cancel'
@@ -148,7 +173,6 @@ Please synthesize the complete, production-ready README.md now.`;
       } catch (err: unknown) {
         lastError = err;
         const msg = err instanceof Error ? err.message : String(err);
-        // If model not found or unsupported, proceed to fallback
         if (msg.includes('404') || msg.includes('not found') || msg.includes('unsupported')) {
           continue;
         }

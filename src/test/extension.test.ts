@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { HealthMonitor } from '../watchers/healthMonitor';
 import { CommitDrafter } from '../git/commitDrafter';
-import { TurboModeRunner } from '../commands/turboMode';
+import { detectHardwarePins } from '../services/turboEngine';
 import { GEMINI_API_KEY_SECRET } from '../ai/geminiClient';
 
 suite('RepoPilot Phase 1 & 2 Test Suite', () => {
@@ -27,14 +27,8 @@ suite('RepoPilot Phase 1 & 2 Test Suite', () => {
     assert.strictEqual(GEMINI_API_KEY_SECRET, 'repopilot.geminiApiKey');
   });
 
-  test('Hardware pin detection regex correctly identifies pin mappings', () => {
-    const mockContext = {
-      subscriptions: [],
-      secrets: { get: async () => undefined, store: async () => undefined, delete: async () => undefined }
-    } as unknown as vscode.ExtensionContext;
-
-    const runner = new TurboModeRunner(mockContext);
-    assert.ok(typeof runner.detectHardwarePins === 'function');
+  test('Hardware pin detection function is defined and callable', () => {
+    assert.strictEqual(typeof detectHardwarePins, 'function');
   });
 
   test('HealthMonitor normalizes path parameters and query strings', () => {
