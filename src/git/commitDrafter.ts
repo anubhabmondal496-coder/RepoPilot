@@ -181,7 +181,7 @@ export class CommitDrafter {
       f === 'requirements.txt' || f === 'package.json' || f === 'package-lock.json' || f === 'pnpm-lock.yaml'
     );
     if (hasDeps && changedFiles.length <= 3) {
-      if (lowerDiff.includes('+fastapi') || lowerDiff.includes('+httpx') || lowerDiff.includes('+"')) {
+      if (lowerDiff.includes('+') && !lowerDiff.includes('---')) {
         return 'fix(deps): update project dependencies in requirements and manifests';
       }
       return 'chore(deps): synchronize package requirements and lockfile';

@@ -47,10 +47,10 @@ export class GeneratorService {
 > *"Let's look at ${ctx.projectName} in action:*
 >
 > 1. **Passive Health Monitoring in Real Time:**
->    *Notice as we work in VS Code, RepoPilot silently monitors our code. When a developer imports a third-party library without adding it to \`requirements.txt\`, RepoPilot immediately flags an in-editor diagnostic warning before it ever breaks CI/CD.*
+>    *Notice as we work in VS Code, RepoPilot silently monitors our code. When a developer imports a third-party library without declaring it in project manifests, RepoPilot immediately flags an in-editor diagnostic warning before it ever breaks CI/CD.*
 >
 > 2. **API Contract Verification:**
->    *When our frontend calls an un-routed endpoint like \`/api/v1/billing\`, RepoPilot's contract engine catches the mismatch instantly in the Problems panel—preventing runtime 404s.*
+>    *When our frontend calls an un-routed or deprecated API endpoint, RepoPilot's contract engine catches the mismatch instantly in the Problems panel—preventing runtime 404s.*
 >
 > 3. **The Hybrid Engine Switch:**
 >    *We can switch seamlessly between two operational modes:*
@@ -190,17 +190,18 @@ export class GeneratorService {
 📁 Workspace Root:        ${this.cwd}
 🛠️ Discovered Endpoints:  ${ctx.backendRoutes.length} route(s)
 📦 Dependencies:          ${ctx.dependencies.slice(0, 6).join(', ')}${ctx.dependencies.length > 6 ? '...' : ''}
+🔗 Interactive Diagram:   https://gitdiagram.com/anubhabmondal496-coder/RepoPilot
 
 🏛️ Component Architecture:
 ┌────────────────────────┐      ┌────────────────────────┐
-│  Frontend Client Calls │ ──►  │ Backend API Endpoints  │
-│  (fetch / axios calls) │      │ (FastAPI / Express)    │
+│  Client / UI Handlers  │ ──►  │ Service / API Routes   │
+│  (API & Event Triggers)│      │ (HTTP / RPC Handlers)  │
 └────────────────────────┘      └────────────────────────┘
             │                               │
             ▼                               ▼
 ┌────────────────────────┐      ┌────────────────────────┐
 │ Passive Health Monitor │ ──►  │ Hybrid Engine & Git    │
-│ (Dependency & Secrets) │      │ (Preview / Turbo Push) │
+│ (Contracts & Security) │      │ (Preview / Turbo Push) │
 └────────────────────────┘      └────────────────────────┘
 
 Status: \x1b[34mPreview Mode active\x1b[0m (Read-only safe inspection. No files or git branches will be modified).

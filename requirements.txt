@@ -1,4 +1,0 @@
-
-# Added automatically by RepoPilot --fix-deps
-fastapi
-httpx

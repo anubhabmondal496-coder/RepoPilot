@@ -77,7 +77,7 @@ export class TurboModeRunner {
         const snapshot = await this.crawlWorkspaceContext(rootPath);
 
         // Step 2: Synthesize documentation via Gemini 2.5 Flash
-        progress.report({ increment: 45, message: 'Synthesizing architecture diagram & specs with Gemini 2.5 Flash...' });
+        progress.report({ increment: 45, message: 'Synthesizing architecture diagram & specs with Gemini 3.8 Flash...' });
         let generatedMarkdown: string;
         try {
           generatedMarkdown = await GeminiClient.generateDocumentation(apiKey, snapshot);

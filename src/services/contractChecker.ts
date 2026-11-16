@@ -206,7 +206,7 @@ export class ContractChecker {
   }
 
   private collectFiles(dir: string, list: string[] = []): string[] {
-    const ignoreDirs = new Set(['node_modules', 'dist', 'out', '.git', '.vscode', '.venv', 'venv']);
+    const ignoreDirs = new Set(['node_modules', 'dist', 'out', '.git', '.vscode', '.venv', 'venv', 'test-fixtures', '.vscode-test']);
     try {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {

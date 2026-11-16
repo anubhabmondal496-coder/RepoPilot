@@ -147,7 +147,7 @@ export class HealthMonitor {
   // ---------------------------------------------------------------------------
 
   private async recheckAllPythonFiles(): Promise<void> {
-    const pyFiles = await vscode.workspace.findFiles('**/*.py', '**/node_modules/**');
+    const pyFiles = await vscode.workspace.findFiles('**/*.py', '{**/node_modules/**,**/test-fixtures/**}');
     for (const uri of pyFiles) {
       await this.checkPythonFile(uri);
     }
@@ -318,7 +318,7 @@ export class HealthMonitor {
     this.backendRoutes.clear();
 
     // 1. Scan Python files for FastAPI / Flask routes
-    const pyFiles = await vscode.workspace.findFiles('**/*.py', '**/node_modules/**');
+    const pyFiles = await vscode.workspace.findFiles('**/*.py', '{**/node_modules/**,**/test-fixtures/**}');
     for (const uri of pyFiles) {
       try {
         const doc = await vscode.workspace.openTextDocument(uri);
@@ -329,7 +329,7 @@ export class HealthMonitor {
     }
 
     // 2. Scan TS / JS files for Express routes
-    const jsFiles = await vscode.workspace.findFiles('**/*.{ts,js}', '{**/node_modules/**,**/dist/**,**/out/**}');
+    const jsFiles = await vscode.workspace.findFiles('**/*.{ts,js}', '{**/node_modules/**,**/dist/**,**/out/**,**/test-fixtures/**}');
     for (const uri of jsFiles) {
       try {
         const doc = await vscode.workspace.openTextDocument(uri);
@@ -371,7 +371,7 @@ export class HealthMonitor {
   }
 
   private async recheckAllFrontendFiles(): Promise<void> {
-    const files = await vscode.workspace.findFiles('**/*.{ts,tsx,js,jsx}', '{**/node_modules/**,**/dist/**,**/out/**}');
+    const files = await vscode.workspace.findFiles('**/*.{ts,tsx,js,jsx}', '{**/node_modules/**,**/dist/**,**/out/**,**/test-fixtures/**}');
     for (const uri of files) {
       await this.checkFrontendFile(uri);
     }

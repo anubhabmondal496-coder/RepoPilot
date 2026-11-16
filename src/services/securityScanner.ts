@@ -237,7 +237,7 @@ export class SecurityScanner {
   }
 
   private collectSourceFiles(dir: string, fileList: string[] = []): string[] {
-    const ignoreDirs = new Set(['node_modules', 'dist', 'out', '.git', '.vscode', '.venv', 'venv', '__pycache__']);
+    const ignoreDirs = new Set(['node_modules', 'dist', 'out', '.git', '.vscode', '.venv', 'venv', '__pycache__', 'test-fixtures', '.vscode-test']);
     const allowedExts = new Set(['.py', '.ts', '.tsx', '.js', '.jsx', '.json', '.env']);
 
     try {
