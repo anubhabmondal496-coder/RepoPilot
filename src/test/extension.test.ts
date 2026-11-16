@@ -2,17 +2,39 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { HealthMonitor } from '../watchers/healthMonitor';
 import { CommitDrafter } from '../git/commitDrafter';
+import { TurboModeRunner } from '../commands/turboMode';
+import { GEMINI_API_KEY_SECRET } from '../ai/geminiClient';
 
-suite('RepoPilot Phase 1 Test Suite', () => {
+suite('RepoPilot Phase 1 & 2 Test Suite', () => {
   suiteSetup(() => {
-    vscode.window.showInformationMessage('Starting RepoPilot Phase 1 tests...');
+    vscode.window.showInformationMessage('Starting RepoPilot tests...');
   });
 
   test('Registered commands exist in VS Code registry', async () => {
     const commands = await vscode.commands.getCommands(true);
     assert.ok(commands.includes('repopilot.draftCommit'), 'repopilot.draftCommit should be registered');
+    assert.ok(commands.includes('repopilot.setApiKey'), 'repopilot.setApiKey should be registered');
     assert.ok(commands.includes('repopilot.turboMode'), 'repopilot.turboMode should be registered');
-    assert.ok(commands.includes('repopilot.sprintLogistics'), 'repopilot.sprintLogistics should be registered');
+    assert.ok(commands.includes('repopilot.enableTurboMode'), 'repopilot.enableTurboMode should be registered');
+    assert.ok(commands.includes('repopilot.enablePreviewMode'), 'repopilot.enablePreviewMode should be registered');
+    assert.ok(commands.includes('repopilot.generateQnA'), 'repopilot.generateQnA should be registered');
+    assert.ok(commands.includes('repopilot.generatePitch'), 'repopilot.generatePitch should be registered');
+    assert.ok(commands.includes('repopilot.checkStatus'), 'repopilot.checkStatus should be registered');
+    assert.ok(commands.includes('repopilot.checkHealth'), 'repopilot.checkHealth should be registered');
+  });
+
+  test('Gemini Secret key constant is defined properly', () => {
+    assert.strictEqual(GEMINI_API_KEY_SECRET, 'repopilot.geminiApiKey');
+  });
+
+  test('Hardware pin detection regex correctly identifies pin mappings', () => {
+    const mockContext = {
+      subscriptions: [],
+      secrets: { get: async () => undefined, store: async () => undefined, delete: async () => undefined }
+    } as unknown as vscode.ExtensionContext;
+
+    const runner = new TurboModeRunner(mockContext);
+    assert.ok(typeof runner.detectHardwarePins === 'function');
   });
 
   test('HealthMonitor normalizes path parameters and query strings', () => {

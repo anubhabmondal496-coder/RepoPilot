@@ -6,6 +6,8 @@ import { ContractChecker } from './services/contractChecker';
 import { SecurityScanner } from './services/securityScanner';
 import { DepFixer } from './services/depFixer';
 import { GitService } from './services/gitService';
+import { GeminiClient } from './ai/geminiClient';
+import { TurboModeRunner } from './commands/turboMode';
 
 let healthMonitorInstance: HealthMonitor | undefined;
 let statusBarItem: vscode.StatusBarItem | undefined;
@@ -201,10 +203,18 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
-  // 8. Placeholders
+  // 8. Gemini API Key and Turbo Mode Execution
+  const turboRunner = new TurboModeRunner(context);
+
   context.subscriptions.push(
-    vscode.commands.registerCommand('repopilot.turboMode', () => {
-      vscode.commands.executeCommand('repopilot.enableTurboMode');
+    vscode.commands.registerCommand('repopilot.setApiKey', async () => {
+      await GeminiClient.setApiKey(context);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('repopilot.turboMode', async () => {
+      await turboRunner.run();
     })
   );
 
