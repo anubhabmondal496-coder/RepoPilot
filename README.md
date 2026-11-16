@@ -15,155 +15,164 @@
 [![View Interactive Architecture on GitDiagram](https://img.shields.io/badge/Interactive_Architecture-GitDiagram-5865F2?style=for-the-badge&logo=git&logoColor=white)](https://gitdiagram.com/anubhabmondal496-coder/RepoPilot)
 > 🔗 **Interactive Visual Hierarchy:** Explore and navigate the live visual file tree and module dependencies at [https://gitdiagram.com/anubhabmondal496-coder/RepoPilot](https://gitdiagram.com/anubhabmondal496-coder/RepoPilot).
 
-### Pipeline & Data Flow
-1. **Trigger & Interface Layer:** VS Code UI commands, status bar toggles, file system event listeners, and the unified `repopilot` CLI.
-2. **Hybrid Engine Controller:** Manages state persistence via `.repopilot.json` to route commands to either dry-run inspection (`preview`) or autonomous resolution (`turbo`).
+### System Data Flow & Layer Responsibilities
+1. **Trigger & Interface Layer:** VS Code command palette entries, status bar toggles, file system event listeners (`vscode.workspace.createFileSystemWatcher`), and the standalone `repopilot` CLI executable.
+2. **Hybrid Engine Controller:** Manages runtime execution state via `.repopilot.json` to route tasks between non-destructive dry-run inspection (`preview`) and automated code modifications (`turbo`).
 3. **Core Analysis & Intelligence Services:**
-   - **Contract Checker & Health Monitor:** Performs debounced, AST-free regex static analysis to reconcile backend endpoints (FastAPI/Express) with frontend client invocations (`fetch`, `axios`).
-   - **Security Scanner:** Scans workspace files for leaked API keys, `.env` exposure, dangerous calls, and missing CORS protections.
-   - **Dependency Resolver:** Detects unlisted third-party imports and synchronizes project manifests (`requirements.txt`, `package.json`).
-   - **AI Synthesis Engine:** Leverages Google Gemini (`@google/genai`) to generate comprehensive documentation, pitch decks, and mock judge Q&A defenses.
-4. **Git Automation Layer:** Integrates directly with the VS Code Git extension and native Git CLI to inspect status, generate semantic commits, and handle push workflows with strict divergence guardrails.
+   - **Contract Checker & Health Monitor:** Static regex-based endpoint parser indexing backend decorators (`@app.get`, `app.post`) and matching them against frontend fetch and axios signatures with normalized parameter paths (`:param`).
+   - **Security Scanner & Secret Gate:** Scans active workspace files for API tokens, unignored `.env` occurrences, hardcoded credentials, and missing CORS declarations.
+   - **Dependency Resolver (`depFixer`):** Compares third-party import trees against system package manifests (`requirements.txt`, `package.json`) to repair broken environments.
+   - **AI Synthesis Engine:** Integrates `@google/genai` to analyze workspace contexts and synthesize documentation, pitch scripts, and mock judge defenses.
+4. **Git Automation Layer:** Interfaces with the VS Code Git extension API and native CLI to inspect status, generate conventional commit messages, and execute push routines guarded by divergence checks.
 
 ### Annotated Directory Tree
 ```
 RepoPilot/
 ├── assets/
-│   └── Diagram.png              # Architectural flow and execution diagrams
+│   └── Diagram.png                  # System architecture and execution flow diagrams
 ├── bin/
-│   └── repopilot.js             # CLI binary launcher routing to compiled runtime
+│   └── repopilot.js                 # Unified CLI executable launcher
 ├── docs/
-│   ├── JUDGE_QNA.md             # Hackathon judge technical Q&A defense script
-│   └── PITCH_SCRIPT.md          # 3-5 minute timed technical presentation script
+│   ├── JUDGE_QNA.md                 # Pre-generated technical judge defense and Q&A matrix
+│   └── PITCH_SCRIPT.md              # 3-5 minute presentation script and pitch breakdown
 ├── src/
 │   ├── ai/
-│   │   └── geminiClient.ts      # Gemini SDK client, SecretStorage manager, doc generator
+│   │   └── geminiClient.ts          # Google GenAI SDK interface & SecretStorage credential store
 │   ├── cli/
-│   │   └── index.ts             # CLI command parser, mode toggles, interactive runners
+│   │   └── index.ts                 # CLI entrypoint, argument parser, and terminal runners
 │   ├── commands/
-│   │   └── turboMode.ts         # VS Code Turbo Mode orchestrator with Git integration
+│   │   └── turboMode.ts             # Turbo mode VS Code command handler and Git push runner
 │   ├── git/
-│   │   └── commitDrafter.ts     # SCM provider diff analyzer & semantic commit synthesizer
+│   │   └── commitDrafter.ts         # Git change analyzer and semantic commit synthesizer
 │   ├── services/
-│   │   ├── contractChecker.ts   # Static frontend/backend API contract matcher
-│   │   ├── depFixer.ts          # Python stdlib vs missing vendor import resolver
-│   │   ├── generatorService.ts  # Markdown document generator (Q&A, Pitch scripts)
-│   │   ├── gitService.ts        # Child-process Git wrapper (branch, diff, push checks)
-│   │   ├── interactiveJudge.ts  # Terminal-based AI judge simulation defense REPL
-│   │   ├── securityScanner.ts   # Regex-based scanner for secret leaks & insecure calls
-│   │   └── turboEngine.ts       # Headless pipeline executing audits, fixes, & AI calls
+│   │   ├── bugFixerEngine.ts        # Automated multi-category bug discovery and repair engine
+│   │   ├── contractChecker.ts       # AST-free frontend/backend API contract reconciliation
+│   │   ├── depFixer.ts              # Python stdlib filter and manifest synchronization service
+│   │   ├── generatorService.ts      # Markdown synthesizer for pitch scripts and judge defense docs
+│   │   ├── gitService.ts            # Native Git wrapper with merge divergence guards
+│   │   ├── interactiveJudge.ts      # Terminal-based AI judge interview and scoring simulator
+│   │   ├── securityScanner.ts       # Workspace secret, CORS, and dangerous call auditor
+│   │   └── turboEngine.ts           # Core Turbo Mode pipeline execution orchestrator
 │   ├── test/
-│   │   └── extension.test.ts    # Integration & contract test suites
+│   │   └── extension.test.ts        # Extension test suites and contract test fixtures
 │   ├── watchers/
-│   │   └── healthMonitor.ts     # Passive background monitor & VS Code Diagnostics provider
-│   └── extension.ts             # Extension activation lifecycle, commands, & status bar
-├── esbuild.js                   # Dual-target CJS bundle configuration (extension & CLI)
-├── package.json                 # Project manifests, VS Code contributions, and CLI bins
-├── tsconfig.json                # TypeScript compiler configuration
-└── vsc-extension-quickstart.md  # Extension development guidelines
+│   │   └── healthMonitor.ts         # Passive file watcher and real-time DiagnosticCollection reporter
+│   └── extension.ts                 # VS Code extension activation entrypoint and command registry
+├── esbuild.js                       # Bundler script for extension and CLI builds
+├── eslint.config.mjs                # ESLint code style and quality configuration
+├── package.json                     # Extension manifest, commands, dependencies, and scripts
+└── tsconfig.json                    # TypeScript compiler configuration
 ```
 
 ---
 
 ## 🔌 Technical Specifications & API Contracts / Hardware Pinouts
 
-RepoPilot performs real-time static code analysis and AST-free regex validation over project route declarations to catch orphaned endpoints and mismatched HTTP signatures before runtime deployment.
+### Detected API Route Contracts
+The background health monitor and contract checking engine statically parse and validate the following endpoint signatures across frontend and backend files:
 
-### Detected Backend API Routes & Static Contracts
-
-| Method | Endpoint | Description | Handler / Originating Module |
+| Method | Endpoint | Description | Handler / Source |
 |---|---|---|---|
-| `GET` | `/api/v1/items` | Test verification fixture for route matching & diagnostics | `src/test/extension.test.ts` |
-| `GET` | `/api/...` | Dynamic route pattern extracted during backend indexing | `src/watchers/healthMonitor.ts` (`extractExpressRoutes` / `extractPythonRoutes`) |
-| `POST` | `/api/...` | Mutation endpoint pattern extracted during backend indexing | `src/watchers/healthMonitor.ts` (`extractExpressRoutes` / `extractPythonRoutes`) |
-| `PUT` | `/api/...` | Resource update endpoint extracted during backend indexing | `src/watchers/healthMonitor.ts` (`extractExpressRoutes` / `extractPythonRoutes`) |
-| `DELETE` | `/api/...` | Resource deletion endpoint extracted during backend indexing | `src/watchers/healthMonitor.ts` (`extractExpressRoutes` / `extractPythonRoutes`) |
+| `GET` | `/api/v1/items` | Test fixture route verifying mock item retrieval | `src/test/extension.test.ts` |
+| `GET` | `/api/...` | Dynamic route match pattern for backend endpoints | `src/watchers/healthMonitor.ts` |
+| `POST` | `/api/...` | Dynamic route match pattern for state mutation handlers | `src/watchers/healthMonitor.ts` |
+| `GET` | `/api/...` | Regex contract pattern validating HTTP client fetches | `src/services/contractChecker.ts` |
+| `POST` | `/api/...` | Regex contract pattern validating payload submission calls | `src/services/contractChecker.ts` |
 
-*Note: No hardware pinouts or microcontroller peripherals (GPIO, I2C, SPI) were detected in this codebase.*
+*(Note: No embedded systems or hardware GPIO pinout definitions were detected in this workspace snapshot.)*
 
 ---
 
 ## 🛠️ Tech Stack & Requirements
 
-### Core Runtime & System Dependencies
-- **Node.js:** `>= 18.0.0`
-- **TypeScript:** `^5.4.0`
-- **VS Code Engine:** `^1.85.0`
-- **Git CLI:** Configured in global system `PATH`
-
-### Production Dependencies
-- **`@google/genai` (`^3.3.0`):** Client library for high-context documentation synthesis and judge simulations.
-- **`@octokit/rest` (`^22.0.1`):** GitHub REST API client for branch checks and remote repo automation.
-
-### Build & Tooling
-- **`esbuild` (`^0.28.1`):** Ultra-fast bundling for CJS targets (`dist/extension.js` and `dist/cli.js`).
-- **`eslint` (`^9.39.5`) & `typescript-eslint` (`^8.36.0`):** Code standards and static typing enforcement.
-- **`npm-run-all` (`^4.1.5`):** Parallel watcher orchestration for development workflows.
-- **`@vscode/test-cli` & `@vscode/test-electron`:** Headless test runner for extension API validation.
+### Core Dependencies & Runtimes
+| Category | Technology | Purpose |
+|---|---|---|
+| **Runtime Environment** | Node.js (>= 18.0.0) | CLI and asynchronous task runtime |
+| **Editor Platform** | VS Code API (^1.85.0) | Extension lifecycle, SCM viewlet, and diagnostics |
+| **Language** | TypeScript (v5.4.0) | Strongly typed application architecture |
+| **AI SDK** | `@google/genai` (^3.3.0) | Workspace synthesis, README drafting, and pitch generation |
+| **Git & Octokit** | `@octokit/rest` (^22.0.1) | GitHub API access and remote synchronization |
+| **Bundler** | esbuild (^0.28.1) | High-speed compilation for both CLI and extension targets |
+| **Linting & Testing** | ESLint (^9.39.5) / `@vscode/test-cli` | Static analysis and integration testing |
 
 ---
 
 ## 🚀 Quickstart & Installation
 
-### 1. Prerequisites & Environment Setup
-Clone the repository and install required project dependencies:
+### Prerequisites
+- Node.js `v18.0.0` or higher installed.
+- Git configured locally in your PATH.
+- (Optional) A Google Gemini API key for AI generation features.
+
+### 1. Clone & Install
 ```bash
 git clone https://github.com/anubhabmondal496-coder/RepoPilot.git
 cd RepoPilot
 npm install
 ```
 
-Configure your environment variable for Gemini AI capabilities (optional for local diagnostics, required for documentation and pitch generation):
+### 2. Build the Extension & CLI
+Compile the TypeScript code using esbuild:
 ```bash
-# Set Gemini API Key in your shell or .env file
+npm run compile
+```
+
+To run continuous file watching during development:
+```bash
+npm run watch
+```
+
+### 3. Environment Configuration
+Set your Gemini API key in your environment or allow the extension to store it securely in VS Code `SecretStorage`:
+```bash
+# On Linux/macOS
 export GEMINI_API_KEY="AIzaSyYourGeminiApiKeyHere"
+
+# On Windows (PowerShell)
+$env:GEMINI_API_KEY="AIzaSyYourGeminiApiKeyHere"
 ```
-*(Alternatively, RepoPilot securely prompts and saves the API key to VS Code's encrypted `SecretStorage` upon running extension commands).*
+Alternatively, create a `.env` file in the root directory:
+```env
+GEMINI_API_KEY=AIzaSyYourGeminiApiKeyHere
+```
 
-### 2. Compilation & Local Linking
-Build the extension and CLI distribution:
+### 4. Running the CLI
+RepoPilot can be executed directly via Node or linked globally:
 ```bash
-# Run type checking and esbuild production bundling
-npm run package
+# Direct execution
+node bin/repopilot.js --help
 
-# Link CLI globally for terminal access
+# Or link globally
 npm link
+repopilot --help
 ```
 
-### 3. Running via CLI
-RepoPilot provides a dual-mode CLI interface accessible via `repopilot`:
-
+### Key CLI Usage Examples:
 ```bash
-# Switch to Turbo Mode (Autonomous scans, fixes, and docs synthesis)
+# Switch to Turbo Mode (autonomous fixes and git workflows)
 repopilot --enable turbo mode
 
-# Switch to Preview Mode (Non-destructive inspection)
+# Switch to Preview Mode (dry-run inspections and route reviews)
 repopilot --enable preview mode
 
-# Audit API contract matches and secret exposures
+# Validate API contracts and scan for leaked secrets
 repopilot --check status
-
-# Perform a deep security and vulnerability scan
 repopilot --check health
 
-# Autonomously resolve and add missing dependencies to requirements.txt
-repopilot --fix-deps
+# Generate presentation materials
+repopilot --generate qna
+repopilot --generate pitch
 
-# Synthesize hackathon deliverables
-repopilot --generate qna       # Outputs docs/JUDGE_QNA.md
-repopilot --generate pitch     # Outputs docs/PITCH_SCRIPT.md
-
-# Start the interactive AI Judge Defense Simulator in your terminal
+# Launch the terminal AI Judge simulator
 repopilot --interactive-judge
 ```
 
-### 4. Running the VS Code Extension
-1. Open the project directory inside VS Code.
-2. Press `F5` (or select **Run > Start Debugging**) to launch an **Extension Development Host**.
-3. Use `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) to open the Command Palette and execute:
+### 5. Running the Extension in VS Code
+1. Open the project folder in VS Code.
+2. Press `F5` to start a new **Extension Development Host** window.
+3. Access commands via `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS) by typing `RepoPilot:`
    - `RepoPilot: Run Turbo Mode`
    - `RepoPilot: Draft Semantic Commit`
-   - `RepoPilot: Set Gemini API Key`
    - `RepoPilot: Check API Contracts & Secret Safety`
-   - `RepoPilot: Start Interactive Judge Simulator`
-4. Toggle operational modes directly by clicking the status bar item: `$(zap) RepoPilot: Turbo` / `$(eye) RepoPilot: Preview`.
+   - `RepoPilot: Set Gemini API Key`
