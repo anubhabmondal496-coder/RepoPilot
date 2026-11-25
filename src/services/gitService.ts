@@ -182,6 +182,18 @@ export class GitService {
     }
   }
 
+  /**
+   * Retrieves the Git remote origin URL if configured.
+   */
+  public getRemoteUrl(): string | undefined {
+    try {
+      const output = execSync('git config --get remote.origin.url', { cwd: this.cwd, encoding: 'utf8' }).trim();
+      return output.length > 0 ? output : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   private generateSemanticCommitMessage(status: string): string {
     if (status.includes('requirements.txt') || status.includes('package.json')) {
       return 'fix(deps): synchronize project dependencies';

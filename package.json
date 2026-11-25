@@ -4,8 +4,26 @@
   "publisher": "RepoPilot",
   "description": "Autonomous VS Code extension for repository health, semantic commits, and intelligent background monitoring based on Diagram.png.",
   "version": "0.1.0",
-  "icon": "Diagram.png",
-  "diagram": "Diagram.png",
+  "icon": "RepoPilot-icon-128x128.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anubhabmondal496-coder/RepoPilot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anubhabmondal496-coder/RepoPilot/issues"
+  },
+  "homepage": "https://github.com/anubhabmondal496-coder/RepoPilot#readme",
+  "license": "MIT",
+  "keywords": [
+    "autonomous",
+    "copilot",
+    "hackathon",
+    "gemini",
+    "git",
+    "audit",
+    "security",
+    "api-contracts"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -32,6 +50,11 @@
       {
         "command": "repopilot.setApiKey",
         "title": "Set Gemini API Key",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.setGroqApiKey",
+        "title": "Set Groq API Key",
         "category": "RepoPilot"
       },
       {
@@ -62,6 +85,16 @@
       {
         "command": "repopilot.checkHealth",
         "title": "Run Security & Vulnerability Audit",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.organizeWorkspace",
+        "title": "Organize File Structure",
+        "category": "RepoPilot"
+      },
+      {
+        "command": "repopilot.automateSubmit",
+        "title": "Generate & Verify Portal Submission",
         "category": "RepoPilot"
       },
       {
@@ -114,6 +147,7 @@
   },
   "dependencies": {
     "@google/genai": "^3.3.0",
-    "@octokit/rest": "^22.0.1"
+    "@octokit/rest": "^22.0.1",
+    "zod": "^4.6.7"
   }
 }

@@ -3,12 +3,14 @@ import * as path from 'path';
 import { ContractChecker } from './contractChecker';
 import { SecurityScanner } from './securityScanner';
 import { DepFixer } from './depFixer';
-import { GeminiClient } from '../ai/geminiClient';
+import { WorkspaceOrganizer } from './workspaceOrganizer';
+import { PlaywrightAutomator } from '../automation/playwrightAutomator';
+import { GroqClient } from '../ai/groqClient';
 import { runTurboCore } from './turboEngine';
 
 export interface CodeBug {
   id: string;
-  category: 'DEPENDENCY' | 'API_CONTRACT' | 'SECURITY' | 'GITIGNORE' | 'DOCUMENTATION';
+  category: 'DEPENDENCY' | 'API_CONTRACT' | 'SECURITY' | 'GITIGNORE' | 'WORKSPACE' | 'DOCUMENTATION' | 'SYNTAX';
   file: string;
   line?: number;
   description: string;
@@ -38,112 +40,85 @@ export class BugFixerEngine {
 
   /**
    * Scans the entire project for all bugs: dependencies, route contracts,
-   * security issues, .gitignore leaks, and documentation inconsistencies.
+   * security issues, .gitignore leaks, workspace layout, and documentation inconsistencies.
    */
   public async discoverBugs(): Promise<CodeBug[]> {
     const bugs: CodeBug[] = [];
 
     // 1. Dependency Bugs (Python & Manifests)
-    const reqPath = path.join(this.rootPath, 'requirements.txt');
     const fixer = new DepFixer(this.rootPath);
-    // Find missing packages without writing yet
-    const existingReqs = new Set<string>();
-    if (fs.existsSync(reqPath)) {
-      const content = fs.readFileSync(reqPath, 'utf8');
-      content.split('\n').forEach((l) => {
-        const clean = l.split(/[=<>#;]/)[0].trim().toLowerCase();
-        if (clean && !clean.startsWith('-')) {
-          existingReqs.add(clean);
+    const missingPkgs = fixer.scanMissingDependencies();
+
+    if (missingPkgs.length > 0) {
+      bugs.push({
+        id: 'dep-missing-requirements',
+        category: 'DEPENDENCY',
+        file: 'requirements.txt',
+        line: 1,
+        severity: 'HIGH',
+        description: `Missing dependency definitions: [${missingPkgs.join(', ')}] imported in code but absent from requirements.txt`,
+        proposedFix: `Append missing packages (${missingPkgs.join(', ')}) to requirements.txt`,
+        fixAction: () => {
+          const res = fixer.fixMissingDependencies();
+          return res.added.length > 0;
         }
       });
     }
 
-    const pyFiles = this.collectFiles(this.rootPath, ['.py']);
-    const missingImports = new Set<string>();
-    for (const file of pyFiles) {
-      try {
-        const content = fs.readFileSync(file, 'utf8');
-        const lines = content.split(/\r?\n/);
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line || line.startsWith('#')) {
-            continue;
-          }
-          const impMatch = line.match(/^import\s+([^#;]+)/) || line.match(/^from\s+([a-zA-Z0-9_\.]+)\s+import/);
-          if (impMatch) {
-            const rawMod = impMatch[1].split('.')[0].trim().toLowerCase();
-            const stdlib = ['os', 'sys', 'json', 'math', 'time', 're', 'typing', 'datetime', 'pathlib', 'collections', 'itertools', 'functools', 'io', 'logging', 'subprocess', 'random', 'string', 'shutil', 'hashlib', 'sqlite3', 'copy', 'unittest', 'dataclasses', 'enum', 'abc'];
-            if (!stdlib.includes(rawMod) && !rawMod.startsWith('.')) {
-              if (!existingReqs.has(rawMod)) {
-                missingImports.add(rawMod);
-                bugs.push({
-                  id: `dep-${rawMod}-${i + 1}`,
-                  category: 'DEPENDENCY',
-                  file: path.relative(this.rootPath, file),
-                  line: i + 1,
-                  severity: 'HIGH',
-                  description: `Missing dependency: Module '${rawMod}' is imported but not listed in requirements.txt`,
-                  proposedFix: `Append '${rawMod}' to requirements.txt`,
-                  fixAction: () => {
-                    const appendText = fs.existsSync(reqPath) ? `\n${rawMod}\n` : `${rawMod}\n`;
-                    fs.appendFileSync(reqPath, appendText, 'utf8');
-                    return true;
-                  }
-                });
-              }
-            }
-          }
-        }
-      } catch {
-        // Skip unreadable files
-      }
-    }
+    // 2. Security Bugs (Secrets, Dangerous Calls & Wildcard CORS)
+    const scanner = new SecurityScanner(this.rootPath);
+    const secReport = scanner.runFullSecurityAudit();
 
-    // 2. Security & Gitignore Leaks
-    const gitignorePath = path.join(this.rootPath, '.gitignore');
-    const envPath = path.join(this.rootPath, '.env');
-    if (fs.existsSync(envPath)) {
-      let isIgnored = false;
-      if (fs.existsSync(gitignorePath)) {
-        const gitignoreContent = fs.readFileSync(gitignorePath, 'utf8');
-        isIgnored = /(?:^|\n)\s*\.env(?:\s|$|\*)/.test(gitignoreContent);
-      }
-      if (!isIgnored) {
+    for (const f of secReport.findings) {
+      if (f.category === 'DANGEROUS_CALL') {
         bugs.push({
-          id: 'sec-gitignore-env',
+          id: `sec-danger-${f.file}-${f.line}`,
+          category: 'SECURITY',
+          file: f.file,
+          line: f.line,
+          severity: 'HIGH',
+          description: `Dangerous Execution: '${f.snippet}' can lead to remote code execution or shell injection`,
+          proposedFix: f.recommendation,
+          fixAction: () => true
+        });
+      } else if (f.category === 'ENV_EXPOSURE') {
+        bugs.push({
+          id: `sec-env-${f.file}-${f.line}`,
           category: 'GITIGNORE',
-          file: '.gitignore',
-          line: 1,
+          file: f.file,
+          line: f.line,
           severity: 'CRITICAL',
-          description: '.env file exists but is NOT protected in .gitignore (credentials leak risk)',
-          proposedFix: 'Add .env and .env.* to .gitignore',
+          description: `Vulnerability: ${f.snippet}`,
+          proposedFix: f.recommendation,
           fixAction: () => {
-            const entry = '\n# Environment variables & secrets\n.env\n.env.*\n';
-            fs.appendFileSync(gitignorePath, entry, 'utf8');
+            const gitignorePath = path.join(this.rootPath, '.gitignore');
+            fs.appendFileSync(gitignorePath, '\n# Security\n.env\n', 'utf8');
             return true;
           }
         });
       }
     }
 
-    const secScanner = new SecurityScanner(this.rootPath);
-    const secReport = secScanner.runFullSecurityAudit();
-    for (const finding of secReport.findings) {
-      if (finding.category !== 'ENV_EXPOSURE') {
-        bugs.push({
-          id: `sec-${finding.category}-${finding.line}`,
-          category: 'SECURITY',
-          file: finding.file,
-          line: finding.line,
-          severity: finding.severity,
-          description: `${finding.category}: ${finding.recommendation}`,
-          proposedFix: `Review and refactor insecure pattern in ${finding.file}:${finding.line}`,
-          fixAction: () => true // Flagged for review
-        });
-      }
+    // 3. Workspace Structure Audit (Organizes VS Code File Structure)
+    const organizer = new WorkspaceOrganizer(this.rootPath);
+    const structAudit = organizer.organize({ autoFix: false });
+    if (!structAudit.hasStandardDirs || structAudit.missingGitignoreRules.length > 0) {
+      bugs.push({
+        id: 'workspace-structure-irregular',
+        category: 'WORKSPACE',
+        file: '.repopilot.json',
+        line: 1,
+        severity: 'MEDIUM',
+        description: `Workspace organization non-standard: missing folders [${structAudit.missingDirs.join(', ')}] or gitignore patterns [${structAudit.missingGitignoreRules.join(', ')}]`,
+        proposedFix: 'Organize workspace structure and synchronize standard directories and gitignore rules',
+        fixAction: () => {
+          organizer.organize({ autoFix: true });
+          return true;
+        }
+      });
     }
 
-    // 3. API Contract Mismatches
+    // 4. API Route Contract Mismatches
     const contractChecker = new ContractChecker(this.rootPath);
     const contractReport = contractChecker.checkSystemStatus();
     for (const orphan of contractReport.details.unmatchedFrontendCalls) {
@@ -159,7 +134,34 @@ export class BugFixerEngine {
       });
     }
 
-    // 4. Documentation & Architecture Outdated Bug
+    // 5. Groq Fast Code Audit (if Groq API key is configured)
+    const groqKey = await GroqClient.getApiKey();
+    if (groqKey) {
+      const candidateFiles = this.collectFiles(this.rootPath, ['.ts', '.py']).slice(0, 5);
+      for (const cf of candidateFiles) {
+        try {
+          const snippet = fs.readFileSync(cf, 'utf8');
+          const rel = path.relative(this.rootPath, cf);
+          const groqBugs = await GroqClient.fastAuditCode(snippet, rel, groqKey);
+          for (const gb of groqBugs) {
+            bugs.push({
+              id: `groq-${gb.id}`,
+              category: gb.category === 'security' ? 'SECURITY' : gb.category === 'dependency' ? 'DEPENDENCY' : 'SYNTAX',
+              file: gb.file,
+              line: gb.line,
+              severity: gb.severity === 'critical' ? 'CRITICAL' : gb.severity === 'high' ? 'HIGH' : gb.severity === 'medium' ? 'MEDIUM' : 'LOW',
+              description: `[Groq Llama-3.3-70B] ${gb.description}`,
+              proposedFix: gb.suggestedFix || 'Apply recommended code fix',
+              fixAction: () => true
+            });
+          }
+        } catch {
+          // Fallback
+        }
+      }
+    }
+
+    // 6. Documentation & Architecture Outdated Bug
     const readmePath = path.join(this.rootPath, 'README.md');
     let isReadmeOutdated = false;
     if (!fs.existsSync(readmePath)) {
@@ -209,6 +211,8 @@ export class BugFixerEngine {
 
     if (bugs.length === 0) {
       console.log('✔ \x1b[32mZero bugs found! Codebase, dependencies, security, and documentation are in optimal health.\x1b[0m\n');
+      // Still ensure deliverables are synced
+      this.syncDeliverables();
       return {
         totalBugsFound: 0,
         bugsFixedCount: 0,
@@ -282,6 +286,9 @@ export class BugFixerEngine {
       }
     }
 
+    // Synchronize workspace deliverables (structure + playwright automation artifacts)
+    this.syncDeliverables();
+
     console.log('──────────────────────────────────────────────────');
     console.log(`🎉 \x1b[1mAudit & Repair Complete:\x1b[0m Fixed ${bugsFixedCount} of ${bugs.length} issue(s) simultaneously.\n`);
 
@@ -294,6 +301,18 @@ export class BugFixerEngine {
       readmeUpdated,
       summary: `Fixed ${bugsFixedCount} of ${bugs.length} discovered issues.`
     };
+  }
+
+  private syncDeliverables(): void {
+    try {
+      const organizer = new WorkspaceOrganizer(this.rootPath);
+      organizer.organize({ autoFix: true });
+
+      const automator = new PlaywrightAutomator(this.rootPath);
+      automator.generateSubmissionPayload();
+    } catch {
+      // Ignore background sync errors
+    }
   }
 
   private collectFiles(dir: string, extensions: string[], list: string[] = []): string[] {

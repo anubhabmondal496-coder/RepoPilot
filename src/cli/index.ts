@@ -10,6 +10,8 @@ import { InteractiveJudge } from '../services/interactiveJudge';
 import { DepFixer } from '../services/depFixer';
 import { runTurboCore } from '../services/turboEngine';
 import { BugFixerEngine } from '../services/bugFixerEngine';
+import { WorkspaceOrganizer } from '../services/workspaceOrganizer';
+import { PlaywrightAutomator } from '../automation/playwrightAutomator';
 
 export interface RepoPilotConfig {
   mode: 'turbo' | 'preview';
@@ -59,7 +61,9 @@ export function printHelp(): void {
   console.log('\nDiagnostic & Security Commands:');
   console.log('  \x1b[32mrepopilot --check status\x1b[0m           Verify frontend-backend route contracts and API key safety');
   console.log('  \x1b[32mrepopilot --check health\x1b[0m           Full security audit (dangerous calls, CORS, .env leaks)');
-  console.log('\nBonus Intelligent Tools:');
+  console.log('\nWorkspace & Automation Tools:');
+  console.log('  \x1b[32mrepopilot --organize\x1b[0m               Organize VS Code file hierarchy and docs/PROJECT_STRUCTURE.md');
+  console.log('  \x1b[32mrepopilot --automate-submit\x1b[0m        Synthesize hackathon portal submission payload and Playwright spec');
   console.log('  \x1b[32mrepopilot --interactive-judge\x1b[0m     Live terminal interview with AI judge grading your defense');
   console.log('  \x1b[32mrepopilot --fix-deps\x1b[0m              Autonomously append missing imports to requirements.txt');
   console.log('  \x1b[32mrepopilot --help\x1b[0m                  Display this reference menu\n');
@@ -98,66 +102,63 @@ export async function handleEnable(tokens: string[]): Promise<void> {
 
     const apiKey = getCliGeminiApiKey();
     if (!apiKey) {
-      console.log('ℹ️ \x1b[33mGemini API key not detected in environment or .env.\x1b[0m');
-      console.log('   Running static bug fixes & security patching without generative AI.');
-      console.log('   (Set $env:GEMINI_API_KEY="AIzaSy..." to enable Gemini AI code synthesis)\n');
+      console.log('⚠️ GEMINI_API_KEY not found in environment or .env file.');
+      console.log('   (Note: Set GEMINI_API_KEY in .env or run in VS Code using "RepoPilot: Set Gemini API Key")\n');
     }
 
-    // 1. Simultaneously search and fix all bugs across codebase
     const bugFixer = new BugFixerEngine(process.cwd(), apiKey);
-    await bugFixer.executePipeline({ mode: 'turbo' });
+    const fixResult = await bugFixer.executePipeline({ mode: 'turbo' });
 
-    // 2. Run conflict verification and push
-    console.log('🚀 Running pre-flight conflict verification & autonomous push...');
+    console.log('⚡ Initiating Turbo Git Push with merge conflict protection...');
     const gitService = new GitService();
     const result = gitService.executeTurboPush();
 
     if (result.haltedForConflict) {
-      console.log('\n⚠️ \x1b[1m\x1b[31mCRITICAL: PUSH HALTED FOR GIT CONFLICT SAFETY!\x1b[0m');
-      console.log(`   ${result.message}`);
-      if (result.conflictedFiles && result.conflictedFiles.length > 0) {
-        console.log('   Conflicted Files:');
-        result.conflictedFiles.forEach((f) => console.log(`     • ${f}`));
-      }
-      console.log('   \x1b[33mAction Required: Resolve merge conflict markers (<<<<<<<) and commit manually.\x1b[0m\n');
-    } else if (result.success) {
-      console.log(`\n✔ \x1b[32mTurbo Push Succeeded:\x1b[0m ${result.message}\n`);
+      console.log(`\n⚠️  \x1b[31m${result.message}\x1b[0m`);
+      console.log('   Manual resolution required before push can proceed.\n');
     } else {
-      console.log(`\n✔ \x1b[32mTurbo Mode Completed:\x1b[0m ${result.message}\n`);
+      console.log(`\n✔ \x1b[32m${result.message}\x1b[0m`);
+      console.log(`   RepoPilot Turbo completed (${fixResult.bugsFixedCount} issue(s) resolved).\n`);
     }
   } else if (target.includes('preview')) {
     config.mode = 'preview';
     saveConfig(config);
     printHeader();
     console.log('🔍 \x1b[1m\x1b[34mPreview Mode Activated\x1b[0m');
-    console.log('   Auditing codebase for bugs, broken contracts, security & docs with user consent...');
+    console.log('   Inspecting codebase, routes, security, and system architecture...');
     console.log('──────────────────────────────────────────────────');
 
     const apiKey = getCliGeminiApiKey();
     const bugFixer = new BugFixerEngine(process.cwd(), apiKey);
 
-    await bugFixer.executePipeline({
+    // Prompt for consent in terminal CLI
+    const fixResult = await bugFixer.executePipeline({
       mode: 'preview',
       onPromptConsent: async (bugs) => {
         if (bugs.length === 0) {
           return false;
         }
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        const answer = await new Promise<string>((resolve) => {
-          rl.question('\n❓ \x1b[1mWould you like RepoPilot to apply these proposed fixes to your workspace? (y/N):\x1b[0m ', (ans) => {
+        return new Promise<boolean>((resolve) => {
+          rl.question(`\n❓ Would you like RepoPilot to apply fixes for these ${bugs.length} issue(s)? (y/N): `, (ans) => {
             rl.close();
-            resolve(ans.trim().toLowerCase());
+            resolve(ans.trim().toLowerCase() === 'y' || ans.trim().toLowerCase() === 'yes');
           });
         });
-        return answer === 'y' || answer === 'yes';
       }
     });
 
     const generator = new GeneratorService();
     const overview = generator.generateArchitectureOverview();
     console.log(overview);
+
+    if (fixResult.userConsented && fixResult.bugsFixedCount > 0) {
+      console.log(`✔ Applied ${fixResult.bugsFixedCount} fix(es) with your consent.\n`);
+    } else {
+      console.log('🔍 Safe preview complete. No files modified.\n');
+    }
   } else {
-    console.error(`\n✘ Unknown mode "${target}". Use "turbo mode" or "preview mode".\n`);
+    console.error(`\n✘ Invalid mode "${target}". Use "--enable turbo mode" or "--enable preview mode".\n`);
     process.exit(1);
   }
 }
@@ -168,14 +169,16 @@ export function handleGenerate(tokens: string[]): void {
 
   if (target.includes('qna')) {
     printHeader();
-    console.log('🎯 \x1b[1mGenerating AI Judge Q&A Simulator Guide...\x1b[0m');
+    console.log('🎯 \x1b[1mGenerating Hackathon Judge Q&A Defense Matrix...\x1b[0m');
+    console.log('──────────────────────────────────────────────────');
     const { qnaPath } = generator.generateQnASession();
     console.log(`✔ Created: \x1b[32m${qnaPath}\x1b[0m`);
-    console.log('   Includes high-scoring answers for Architecture, Scalability, Security, and Edge Cases.');
+    console.log('   Includes Architecture, API Security, Scalability, and Stress-test answers.');
     console.log('──────────────────────────────────────────────────\n');
   } else if (target.includes('pitch')) {
     printHeader();
-    console.log('🎤 \x1b[1mGenerating 3-5 Minute Hackathon Pitch Script...\x1b[0m');
+    console.log('🎤 \x1b[1mGenerating Timed 3-5 Minute Pitch Script...\x1b[0m');
+    console.log('──────────────────────────────────────────────────');
     const { scriptPath } = generator.generatePitchScript();
     console.log(`✔ Created: \x1b[32m${scriptPath}\x1b[0m`);
     console.log('   Includes Hook (0:45), Live Demo (2:15), Tech Deep Dive (3:15), and Closing.');
@@ -267,14 +270,48 @@ export async function runCli(argv = process.argv.slice(2)): Promise<void> {
     return;
   }
 
-  // 4. repopilot --interactive-judge
+  // 4. repopilot --organize
+  if (argv.includes('--organize') || argv[0] === 'organize') {
+    printHeader();
+    console.log('📁 \x1b[1mOrganizing VS Code Workspace File Structure...\x1b[0m');
+    console.log('──────────────────────────────────────────────────');
+    const organizer = new WorkspaceOrganizer(process.cwd());
+    const res = organizer.organize({ autoFix: true });
+    if (res.createdDirs.length > 0) {
+      console.log(`✔ Created standard directories: [${res.createdDirs.join(', ')}]`);
+    } else {
+      console.log('✔ Standard directories (src, docs, assets, tests) already in place.');
+    }
+    if (res.gitignoreUpdated) {
+      console.log('✔ Updated .gitignore with standard exclusion rules.');
+    }
+    console.log('✔ Generated visual structure at \x1b[32mdocs/PROJECT_STRUCTURE.md\x1b[0m');
+    console.log('──────────────────────────────────────────────────\n');
+    return;
+  }
+
+  // 5. repopilot --automate-submit
+  if (argv.includes('--automate-submit') || argv[0] === 'submit') {
+    printHeader();
+    console.log('🏆 \x1b[1mGenerating Hackathon Portal Submission & Playwright Spec...\x1b[0m');
+    console.log('──────────────────────────────────────────────────');
+    const automator = new PlaywrightAutomator(process.cwd());
+    const res = automator.generateSubmissionPayload();
+    console.log(`✔ Submission Payload: \x1b[32m${res.jsonPath}\x1b[0m`);
+    console.log(`✔ Markdown Preview:   \x1b[32m${res.previewPath}\x1b[0m`);
+    console.log('✔ Playwright Spec:    \x1b[32mtests/portal_submission.spec.ts\x1b[0m');
+    console.log('──────────────────────────────────────────────────\n');
+    return;
+  }
+
+  // 6. repopilot --interactive-judge
   if (argv.includes('--interactive-judge') || argv[0] === 'judge') {
     const judge = new InteractiveJudge();
     await judge.startSession();
     return;
   }
 
-  // 5. repopilot --fix-deps
+  // 7. repopilot --fix-deps
   if (argv.includes('--fix-deps')) {
     printHeader();
     console.log('📦 \x1b[1mAutonomously Fixing Missing Dependencies...\x1b[0m');

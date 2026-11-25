@@ -7,8 +7,11 @@ import { SecurityScanner } from './services/securityScanner';
 import { DepFixer } from './services/depFixer';
 import { GitService } from './services/gitService';
 import { GeminiClient } from './ai/geminiClient';
+import { GroqClient } from './ai/groqClient';
 import { TurboModeRunner } from './commands/turboMode';
 import { BugFixerEngine } from './services/bugFixerEngine';
+import { WorkspaceOrganizer } from './services/workspaceOrganizer';
+import { PlaywrightAutomator } from './automation/playwrightAutomator';
 
 let healthMonitorInstance: HealthMonitor | undefined;
 let statusBarItem: vscode.StatusBarItem | undefined;
@@ -233,12 +236,18 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
-  // 8. Gemini API Key and Turbo Mode Execution
+  // 8. Gemini API Key, Groq Key, and Turbo Mode Execution
   const turboRunner = new TurboModeRunner(context);
 
   context.subscriptions.push(
     vscode.commands.registerCommand('repopilot.setApiKey', async () => {
       await GeminiClient.setApiKey(context);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('repopilot.setGroqApiKey', async () => {
+      await GroqClient.setApiKey(context);
     })
   );
 
@@ -251,6 +260,36 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('repopilot.sprintLogistics', () => {
       vscode.commands.executeCommand('repopilot.generatePitch');
+    })
+  );
+
+  // 9. Workspace Organization & Playwright Portal Automation
+  context.subscriptions.push(
+    vscode.commands.registerCommand('repopilot.organizeWorkspace', async () => {
+      const organizer = new WorkspaceOrganizer(rootPath);
+      const result = organizer.organize({ autoFix: true });
+      const treeDocPath = vscode.Uri.file(rootPath + '/docs/PROJECT_STRUCTURE.md');
+      try {
+        const doc = await vscode.workspace.openTextDocument(treeDocPath);
+        await vscode.window.showTextDocument(doc);
+      } catch {
+        // Fallback
+      }
+      vscode.window.showInformationMessage(
+        `✔ RepoPilot: Workspace organized. Verified folders [${organizer['standardDirs'].join(', ')}] and updated docs/PROJECT_STRUCTURE.md.`
+      );
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('repopilot.automateSubmit', async () => {
+      const automator = new PlaywrightAutomator(rootPath);
+      const result = automator.generateSubmissionPayload();
+      const previewDoc = await vscode.workspace.openTextDocument(vscode.Uri.file(result.previewPath));
+      await vscode.window.showTextDocument(previewDoc);
+      vscode.window.showInformationMessage(
+        `🏆 RepoPilot: Generated hackathon submission preview at docs/SUBMISSION_PREVIEW.md and Playwright spec at tests/portal_submission.spec.ts!`
+      );
     })
   );
 

@@ -1,0 +1,29 @@
+{
+  "projectName": "RepoPilot",
+  "tagline": "Autonomous VS Code extension for repository health, semantic commits, and intelligent background monitoring based on Dia",
+  "description": "Autonomous VS Code extension for repository health, semantic commits, and intelligent background monitoring based on Diagram.png. Includes automated AST-free API route reconciliation, security scanning, semantic Git commits, and judge defense synthesis.",
+  "repositoryUrl": "https://github.com/anubhabmondal496-coder/RepoPilot.git",
+  "demoUrl": "https://gitdiagram.com/anubhabmondal496-coder/RepoPilot",
+  "videoUrl": "",
+  "tracks": [
+    "Developer Tools",
+    "AI & Automation",
+    "Productivity"
+  ],
+  "techStack": [
+    "TypeScript",
+    "Node.js",
+    "VS Code API",
+    "Google Gemini 2.5/3.8 Flash",
+    "Groq Llama-3.3-70B",
+    "Playwright"
+  ],
+  "builtWith": [
+    "TypeScript",
+    "Gemini AI",
+    "Groq Llama",
+    "Playwright",
+    "Octokit"
+  ],
+  "submittedAt": "2026-11-25T11:45:13.345Z"
+}

@@ -139,8 +139,8 @@ export class SecurityScanner {
   private scanFileContent(filePath: string, content: string, findings: SecurityFinding[]): void {
     const relativePath = path.relative(this.cwd, filePath);
 
-    // Skip scanning security scanner rules file itself
-    if (relativePath.endsWith('securityScanner.ts')) {
+    // Skip scanning security scanner rules file itself and local git-ignored .env files
+    if (relativePath.endsWith('securityScanner.ts') || relativePath === '.env' || relativePath.startsWith('.env.')) {
       return;
     }
 

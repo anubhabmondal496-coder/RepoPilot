@@ -51,6 +51,56 @@ export class DepFixer {
   }
 
   /**
+   * Scans Python files and returns missing third-party packages without modifying files.
+   */
+  public scanMissingDependencies(): string[] {
+    const reqPath = path.join(this.cwd, 'requirements.txt');
+    const existing = new Set<string>();
+
+    if (fs.existsSync(reqPath)) {
+      const content = fs.readFileSync(reqPath, 'utf8');
+      content.split('\n').forEach((l) => {
+        const clean = l.split(/[=<>#;]/)[0].trim().toLowerCase();
+        if (clean && !clean.startsWith('-')) {
+          existing.add(clean);
+        }
+      });
+    }
+
+    const pyFiles = this.collectPyFiles(this.cwd);
+    const missing = new Set<string>();
+
+    for (const file of pyFiles) {
+      try {
+        const content = fs.readFileSync(file, 'utf8');
+        const lines = content.split(/\r?\n/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) {
+            continue;
+          }
+
+          const imports = this.extractImports(trimmed);
+          for (const imp of imports) {
+            const top = imp.split('.')[0].toLowerCase();
+            if (PYTHON_STDLIB.has(top) || top.startsWith('.')) {
+              continue;
+            }
+            const canonical = ALIASES[top] || top.replace(/[-_.]/g, '-');
+            if (!existing.has(canonical) && !existing.has(top)) {
+              missing.add(canonical);
+            }
+          }
+        }
+      } catch {
+        // Ignore read error
+      }
+    }
+
+    return Array.from(missing);
+  }
+
+  /**
    * Scans Python files and synchronizes missing imports into requirements.txt.
    */
   public fixMissingDependencies(): { added: string[]; requirementsFile: string } {

@@ -3,10 +3,16 @@
 out/**
 node_modules/**
 src/**
+tests/**
 .gitignore
 .yarnrc
+.env*
+*.vsix
+*.log
+proofs/**
 esbuild.js
 vsc-extension-quickstart.md
+README.backup.md
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map

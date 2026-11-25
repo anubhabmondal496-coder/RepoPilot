@@ -21,6 +21,9 @@ suite('RepoPilot Phase 1 & 2 Test Suite', () => {
     assert.ok(commands.includes('repopilot.generatePitch'), 'repopilot.generatePitch should be registered');
     assert.ok(commands.includes('repopilot.checkStatus'), 'repopilot.checkStatus should be registered');
     assert.ok(commands.includes('repopilot.checkHealth'), 'repopilot.checkHealth should be registered');
+    assert.ok(commands.includes('repopilot.setGroqApiKey'), 'repopilot.setGroqApiKey should be registered');
+    assert.ok(commands.includes('repopilot.organizeWorkspace'), 'repopilot.organizeWorkspace should be registered');
+    assert.ok(commands.includes('repopilot.automateSubmit'), 'repopilot.automateSubmit should be registered');
   });
 
   test('Gemini Secret key constant is defined properly', () => {
@@ -74,5 +77,18 @@ suite('RepoPilot Phase 1 & 2 Test Suite', () => {
     // Config changes
     const configMessage = drafter.synthesizeConventionalCommit(['tsconfig.json'], '+  "target": "ES2022"');
     assert.ok(configMessage.startsWith('chore(config)'));
+  });
+
+  test('Zod validation verifies portal submission schema correctly', async () => {
+    const { PortalSubmissionSchema, validateWithSchema } = await import('../verification/schemas.js');
+    const validData = {
+      projectName: 'RepoPilot',
+      tagline: 'Autonomous developer copilot',
+      description: 'Comprehensive developer copilot with dual mode execution and verification.',
+      repositoryUrl: 'https://github.com/anubhabmondal496-coder/RepoPilot.git',
+      techStack: ['TypeScript', 'VS Code API', 'Google GenAI']
+    };
+    const result = validateWithSchema(PortalSubmissionSchema, validData, validData as never);
+    assert.strictEqual(result.success, true);
   });
 });

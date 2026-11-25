@@ -24,3 +24,7 @@ Thumbs.db
 # Project & Hackathon specific
 proofs/
 hackathon.config.json
+
+# Added by RepoPilot Workspace Organizer
+__pycache__
+.pytest_cache

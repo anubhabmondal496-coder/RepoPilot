@@ -20,7 +20,6 @@ export interface GeminiModelClient {
 
 function getVSCode(): typeof import('vscode') | undefined {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('vscode');
   } catch {
     return undefined;
